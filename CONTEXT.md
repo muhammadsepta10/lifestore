@@ -209,3 +209,33 @@ _Avoid_: Closing, tutup bulan
 **Penjualan Diakui**:
 Saat Tagihan ditutup (lunas atau menjadi Piutang); HPP diakui lebih awal, saat stok dipotong.
 _Avoid_: Revenue recognition
+
+## Karyawan
+
+**Peran**:
+Kumpulan izin yang diberikan lewat Penugasan; tersedia peran bawaan (Pemilik, Manajer Outlet, Kasir, Pelayan, Dapur, Gudang, Akuntan) dan Tenant bisa membuat peran sendiri dari daftar izin.
+_Avoid_: Role, jabatan, level akses
+
+**Perangkat Terdaftar**:
+Tablet atau PC milik Outlet yang didaftarkan sekali oleh manajer; staf berganti di perangkat ini cukup dengan PIN.
+_Avoid_: Device, terminal, mesin kasir
+
+**PIN**:
+Kode 4–6 digit milik Anggota untuk masuk di Perangkat Terdaftar; staf boleh hanya punya PIN tanpa akun Pengguna.
+_Avoid_: Password, kode staf
+
+**Shift**:
+Satu sesi laci kas di satu Perangkat Terdaftar, dari modal awal sampai Hitung Buta; semua kas masuk/keluar tercatat di dalamnya.
+_Avoid_: Sesi kasir, tutup kasir
+
+**Hitung Buta**:
+Penghitungan uang di laci saat Shift ditutup tanpa melihat angka sistem; selisihnya dicatat.
+_Avoid_: Blind count, setoran
+
+**Persetujuan Atasan**:
+Izin dari Anggota berwenang untuk aksi sensitif (void setelah dimasak, refund, diskon manual di atas batas, Piutang, buka laci tanpa transaksi, Item Custom), lewat PIN di perangkat yang sama atau notifikasi ke HP atasan.
+_Avoid_: Override, otorisasi manager
+
+**Absensi**:
+Catatan jam masuk dan pulang Anggota lewat PIN di Perangkat Terdaftar, dengan selfie opsional, bisa diekspor untuk penggajian di luar sistem.
+_Avoid_: Presensi, clock-in
