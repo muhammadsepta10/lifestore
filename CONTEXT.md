@@ -293,3 +293,25 @@ _Avoid_: Biaya layanan, SC, tips
 **Dasar Pajak**:
 Jumlah yang dikenai PBJT dalam satu Tagihan: subtotal setelah diskon ditambah Service Charge; voucher yang dipakai sebagai alat bayar tidak menguranginya.
 _Avoid_: DPP (boleh di laporan), omzet kena pajak
+
+## Ojol
+
+**Kode Pesanan Platform**:
+Kode pesanan dari aplikasi ojol (misal F-123) yang diketik kasir ke Tagihan ojol, dipakai untuk mencocokkan dengan driver dan laporan platform.
+_Avoid_: Order ID ojol, booking code
+
+**Piutang Platform**:
+Metode Bayar untuk Tagihan ojol: Tagihan langsung lunas, dananya ditagih ke platform sampai pencairan dicatat lewat Rekonsiliasi.
+_Avoid_: Saldo GoFood, settlement ojol
+
+**Komisi Platform**:
+Potongan platform ojol (persen per Kanal, plus PPN atas komisi) yang dicatat sebagai perkiraan biaya saat Tagihan ditutup dan disesuaikan saat dana cair.
+_Avoid_: Fee ojol, MDR (itu biaya Metode Bayar)
+
+**Promo Platform**:
+Diskon di aplikasi ojol; hanya bagian yang ditanggung resto yang dicatat sebagai diskon, bagian yang ditanggung platform tidak dicatat.
+_Avoid_: Promo ojol, subsidi
+
+**Siap Diambil**:
+Daftar di kasir berisi pesanan ojol dan takeaway yang sudah selesai dimasak dan menunggu diambil driver atau pelanggan.
+_Avoid_: Pickup list, ready queue
