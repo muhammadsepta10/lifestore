@@ -257,3 +257,21 @@ _Avoid_: Approval pesanan, verifikasi order
 **Panggilan Pelayan**:
 Permintaan dari HP pelanggan dengan alasan singkat yang muncul di layar kasir dan HP pelayan, dibatasi satu per menit per Meja.
 _Avoid_: Call waiter, bel
+
+## Offline
+
+**Sinkron**:
+Pengiriman antrean aksi perangkat ke server (idempoten, tidak dihapus sebelum server mengonfirmasi) dan penarikan perubahan terbaru dari server.
+_Avoid_: Sync, upload, backup
+
+**Nomor Nota**:
+Nomor resmi berurutan tanpa celah per Outlet yang diberikan server saat Tagihan tersinkron; struk yang dicetak offline memakai Nomor Pesanan perangkat.
+_Avoid_: Nomor struk, nomor faktur, invoice number
+
+**Perlu Ditinjau**:
+Daftar kejadian hasil Sinkron yang butuh keputusan manusia, misalnya satu Meja dibuka di dua perangkat atau pembayaran ganda; tidak pernah diselesaikan otomatis.
+_Avoid_: Konflik, error sync
+
+**Hub Lokal**:
+Perangkat tambahan opsional di Outlet yang meneruskan pesanan dari kasir ke layar dapur lewat jaringan lokal saat internet mati; tanpa Hub Lokal, dapur memakai tiket cetak.
+_Avoid_: Server lokal, local server, gateway
