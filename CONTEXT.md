@@ -243,7 +243,7 @@ _Avoid_: Presensi, clock-in
 ## QR Meja
 
 **Meja**:
-Tempat duduk di satu Outlet dengan QR stiker statis yang tidak berubah; bisa dinonaktifkan dari kasir.
+Tempat duduk di satu Outlet dengan QR stiker statis yang tidak berubah, kapasitas kursi, dan status Kosong, Dipesan, atau Terisi; bisa dinonaktifkan dari kasir.
 _Avoid_: Table, nomor meja (itu label, bukan entitasnya)
 
 **Sesi Meja**:
@@ -377,3 +377,21 @@ _Avoid_: Redeem, klaim
 **Tier**:
 Tingkat Member opsional (default mati) berdasarkan belanja 12 bulan terakhir, yang memberi pengali Poin.
 _Avoid_: Level, kasta
+
+## Reservasi
+
+**Reservasi**:
+Pemesanan Meja untuk slot waktu (per 30 menit, durasi default 90 menit) lewat halaman reservasi Outlet atau dicatat staf; Meja dipilih otomatis sesuai jumlah tamu dan berstatus Dipesan 30 menit sebelum jamnya.
+_Avoid_: Booking, pesan tempat
+
+**Deposit Reservasi**:
+Uang muka opsional lewat gateway yang menjadi Pembayaran di Tagihan saat tamu datang; di-refund bila batal paling lambat 24 jam sebelumnya, hangus sebagai pendapatan lain bila tidak datang.
+_Avoid_: DP, Voucher Saldo (itu hal lain)
+
+**Tamu Datang**:
+Aksi staf yang mengubah Reservasi menjadi Sesi Meja dan Tagihan, memasukkan Deposit Reservasi, dan mengirim pesanan di muka ke dapur; tanpa aksi ini dalam 15 menit, Reservasi ditandai tidak datang.
+_Avoid_: Check-in, kedatangan
+
+**Daftar Tunggu**:
+Antrean tamu tanpa Reservasi saat Outlet penuh (nama, jumlah tamu, nomor HP), dipanggil lewat WhatsApp saat Meja kosong.
+_Avoid_: Waiting list, antrean
