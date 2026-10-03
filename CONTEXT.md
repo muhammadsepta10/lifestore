@@ -63,3 +63,37 @@ _Avoid_: Split bill (ambigu)
 **Waste**:
 Bahan yang terpakai tetapi tidak menghasilkan penjualan, misalnya Item Pesanan yang dibatalkan setelah dimasak.
 _Avoid_: Bahan terbuang, loss
+
+## Menu
+
+**Menu**:
+Sesuatu yang bisa dipesan pelanggan, dimiliki sebuah Merek dan dikelompokkan dalam Kategori.
+_Avoid_: Produk, item, SKU
+
+**Varian**:
+Pilihan wajib-tepat-satu pada sebuah Menu yang mengubah harga dan resepnya (misal Reguler / Jumbo).
+_Avoid_: Ukuran, size
+
+**Grup Pilihan**:
+Sekumpulan pilihan tambahan pada Menu dengan aturan jumlah minimum/maksimum, masing-masing bisa gratis atau berbayar (misal level pedas, topping).
+_Avoid_: Modifier, add-on group
+
+**Paket**:
+Menu berharga sendiri yang terdiri dari komponen tetap dan slot pilihan; stok dan stasiun dapur ditentukan per komponen.
+_Avoid_: Combo, bundle
+
+**Harga Kanal**:
+Aturan markup (persen atau nominal) yang berlaku untuk satu Kanal, dengan override per Menu; diterapkan setelah harga dasar Merek dan override Outlet.
+_Avoid_: Harga ojol, price list
+
+**Stasiun**:
+Area kerja dapur di sebuah Outlet (misal Bar, Dapur, Grill) yang menerima Item Pesanan sesuai pemetaan Menu.
+_Avoid_: Station, printer
+
+**Habis**:
+Status Menu yang sementara tidak bisa dipesan di sebuah Outlet, ditandai manual atau otomatis dari stok jika Outlet mengaktifkannya.
+_Avoid_: Sold out, kosong
+
+**Item Custom**:
+Item di luar Menu dengan nama dan harga yang diisi manual oleh peran yang diizinkan; tidak punya resep dan tidak memotong stok.
+_Avoid_: Open item, item manual
