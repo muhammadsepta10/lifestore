@@ -315,3 +315,25 @@ _Avoid_: Promo ojol, subsidi
 **Siap Diambil**:
 Daftar di kasir berisi pesanan ojol dan takeaway yang sudah selesai dimasak dan menunggu diambil driver atau pelanggan.
 _Avoid_: Pickup list, ready queue
+
+## Langganan
+
+**Paket Langganan**:
+Tingkat langganan Tenant (Dasar, Pro, Bisnis) yang menentukan fitur yang terbuka; ditagih per Outlet per bulan atau per tahun. Selalu ditulis lengkap agar tidak tertukar dengan Paket menu.
+_Avoid_: Paket (tanpa "Langganan"), plan, tier, lisensi
+
+**Masa Coba**:
+14 hari pertama Tenant dengan semua fitur Pro tanpa kartu.
+_Avoid_: Trial, demo
+
+**Mode Terbatas**:
+Keadaan Tenant yang telat bayar 8–30 hari atau habis Masa Coba: kasir tetap bisa berjualan dan Sinkron, pengaturan dan laporan dikunci.
+_Avoid_: Suspend (itu tahap setelahnya), read-only
+
+**Komisi Transaksi**:
+Potongan platform atas pembayaran online lewat gateway yang dipisah otomatis dari Sub-akun Gateway; tidak ada untuk tunai dan metode manual.
+_Avoid_: Fee platform, MDR (itu biaya gateway)
+
+**Admin Platform**:
+Tim Lifestore yang mengelola Tenant lewat back-office; masuk sebagai Tenant hanya dengan izin pemilik dan selalu tercatat.
+_Avoid_: Superadmin, tim support
