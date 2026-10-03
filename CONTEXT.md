@@ -157,3 +157,29 @@ _Avoid_: AP, utang supplier
 **Kas Kecil**:
 Dana tunai Outlet yang terpisah dari laci kasir, dipakai untuk pengeluaran kecil seperti Belanja Langsung.
 _Avoid_: Petty cash
+
+## Pembayaran
+
+**Pembayaran**:
+Satu pelunasan sebagian atau seluruh Tagihan dengan satu Metode Bayar; satu Tagihan bisa punya banyak Pembayaran.
+_Avoid_: Transaksi, payment
+
+**Metode Bayar**:
+Cara bayar yang diaktifkan per Outlet: tunai, QRIS dinamis (gateway), QRIS statis resto, kartu via EDC, transfer bank, e-wallet (gateway), atau Piutang.
+_Avoid_: Payment type, tender
+
+**Sub-akun Gateway**:
+Akun payment gateway milik masing-masing Tenant (KYC atas nama resto) tempat dana pelanggan langsung masuk; platform hanya menerima potongan komisi.
+_Avoid_: Merchant account, rekening platform
+
+**Piutang**:
+Tagihan yang ditutup tanpa dibayar untuk Pelanggan terdaftar dengan batas kredit, dilunasi belakangan dengan persetujuan atasan.
+_Avoid_: Kasbon, AR, bon
+
+**Pembulatan Tunai**:
+Selisih kecil karena pembayaran tunai dibulatkan sesuai aturan Outlet, dicatat terpisah dari penjualan.
+_Avoid_: Kembalian, receh
+
+**Rekonsiliasi**:
+Pencocokan Pembayaran yang tercatat dengan dana yang benar-benar diterima: otomatis untuk gateway, manual untuk EDC dan transfer.
+_Avoid_: Settlement (itu sisi gateway), cocokkan kas
