@@ -239,3 +239,21 @@ _Avoid_: Override, otorisasi manager
 **Absensi**:
 Catatan jam masuk dan pulang Anggota lewat PIN di Perangkat Terdaftar, dengan selfie opsional, bisa diekspor untuk penggajian di luar sistem.
 _Avoid_: Presensi, clock-in
+
+## QR Meja
+
+**Meja**:
+Tempat duduk di satu Outlet dengan QR stiker statis yang tidak berubah; bisa dinonaktifkan dari kasir.
+_Avoid_: Table, nomor meja (itu label, bukan entitasnya)
+
+**Sesi Meja**:
+Kunjungan yang dibuka saat QR Meja pertama kali dipindai dan terikat ke satu Tagihan; semua HP yang memindai QR yang sama ikut sesi ini, dan sesi ditutup otomatis saat Tagihan lunas.
+_Avoid_: Session, kunjungan, check-in
+
+**Konfirmasi Staf**:
+Pengaturan per Outlet apakah Pesanan dari QR langsung ke dapur, hanya Pesanan pertama tiap Sesi Meja yang dikonfirmasi pelayan/kasir (default), atau semua Pesanan dikonfirmasi.
+_Avoid_: Approval pesanan, verifikasi order
+
+**Panggilan Pelayan**:
+Permintaan dari HP pelanggan dengan alasan singkat yang muncul di layar kasir dan HP pelayan, dibatasi satu per menit per Meja.
+_Avoid_: Call waiter, bel
