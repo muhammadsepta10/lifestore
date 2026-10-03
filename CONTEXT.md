@@ -337,3 +337,25 @@ _Avoid_: Fee platform, MDR (itu biaya gateway)
 **Admin Platform**:
 Tim Lifestore yang mengelola Tenant lewat back-office; masuk sebagai Tenant hanya dengan izin pemilik dan selalu tercatat.
 _Avoid_: Superadmin, tim support
+
+## Promo
+
+**Promo**:
+Aturan potongan harga milik Merek (diskon persen/nominal, beli X gratis Y, Happy Hour, minimum belanja) dengan cakupan Outlet, Kanal, periode, jadwal, dan kuota; terpasang otomatis saat syarat terpenuhi. Default tidak berlaku di Kanal ojol.
+_Avoid_: Diskon (itu hasilnya), campaign, Promo Platform (itu promo di aplikasi ojol)
+
+**Bisa Digabung**:
+Tanda pada Promo yang mengizinkannya berlaku bersama Promo lain; tanpa tanda ini sistem memilih satu Promo yang paling menguntungkan pelanggan.
+_Avoid_: Stackable, kombinasi
+
+**Diskon Manual**:
+Potongan yang diberikan kasir dengan alasan wajib, dibatasi persentase per Peran; di atas batas butuh Persetujuan Atasan.
+_Avoid_: Diskon kasir, open discount
+
+**Voucher Diskon**:
+Kode (bisa massal dan unik) yang mengaktifkan Promo; maksimal satu per Tagihan; mengurangi Dasar Pajak.
+_Avoid_: Kupon, promo code
+
+**Voucher Saldo**:
+Voucher berbayar seperti gift card; saat dijual dicatat sebagai uang muka, menjadi penjualan saat dipakai sebagai Metode Bayar, dan tidak mengurangi Dasar Pajak.
+_Avoid_: Gift card, voucher belanja, deposit
