@@ -275,3 +275,21 @@ _Avoid_: Konflik, error sync
 **Hub Lokal**:
 Perangkat tambahan opsional di Outlet yang meneruskan pesanan dari kasir ke layar dapur lewat jaringan lokal saat internet mati; tanpa Hub Lokal, dapur memakai tiket cetak.
 _Avoid_: Server lokal, local server, gateway
+
+## Pajak
+
+**Profil Pajak**:
+Pengaturan pajak satu Outlet: jenis (PBJT, PPN, atau tidak dipungut), tarif, kota, label di struk, ambang omzet, dan tanggal mulai berlaku; sama untuk semua Kanal.
+_Avoid_: Setting pajak, tax config
+
+**PBJT**:
+Pajak daerah atas makanan dan minuman (pengganti Pajak Restoran/PB1), maksimal 10%, tarifnya ditetapkan Perda kota tempat Outlet berada.
+_Avoid_: PB1 (kecuali sebagai label struk), pajak restoran, PPN
+
+**Service Charge**:
+Biaya layanan dengan tarif per Outlet, default hanya untuk dine-in, dihitung dari harga setelah diskon, dan ikut menjadi dasar PBJT.
+_Avoid_: Biaya layanan, SC, tips
+
+**Dasar Pajak**:
+Jumlah yang dikenai PBJT dalam satu Tagihan: subtotal setelah diskon ditambah Service Charge; voucher yang dipakai sebagai alat bayar tidak menguranginya.
+_Avoid_: DPP (boleh di laporan), omzet kena pajak
