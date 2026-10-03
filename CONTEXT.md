@@ -359,3 +359,21 @@ _Avoid_: Kupon, promo code
 **Voucher Saldo**:
 Voucher berbayar seperti gift card; saat dijual dicatat sebagai uang muka, menjadi penjualan saat dipakai sebagai Metode Bayar, dan tidak mengurangi Dasar Pajak.
 _Avoid_: Gift card, voucher belanja, deposit
+
+## Loyalti
+
+**Member**:
+Pelanggan yang nomor HP-nya terverifikasi OTP; keanggotaannya berlaku per Tenant di semua Merek dan Outlet.
+_Avoid_: Anggota (itu staf), customer terdaftar
+
+**Poin**:
+Saldo loyalti Member yang didapat saat Tagihan ditutup (default 1 per Rp10.000 setelah diskon, sebelum pajak, kecuali Kanal ojol), ditarik kembali saat void/refund, dan hangus 12 bulan setelah didapat (yang terlama dipakai dulu).
+_Avoid_: Reward, koin, cashback
+
+**Penukaran Poin**:
+Pemakaian Poin untuk potongan rupiah atau hadiah katalog dengan verifikasi OTP; dicatat sebagai diskon, boleh digabung dengan Promo otomatis tapi tidak dengan Voucher Diskon.
+_Avoid_: Redeem, klaim
+
+**Tier**:
+Tingkat Member opsional (default mati) berdasarkan belanja 12 bulan terakhir, yang memberi pengali Poin.
+_Avoid_: Level, kasta
