@@ -183,3 +183,29 @@ _Avoid_: Kembalian, receh
 **Rekonsiliasi**:
 Pencocokan Pembayaran yang tercatat dengan dana yang benar-benar diterima: otomatis untuk gateway, manual untuk EDC dan transfer.
 _Avoid_: Settlement (itu sisi gateway), cocokkan kas
+
+## Keuangan
+
+**Jurnal**:
+Catatan double-entry yang dibuat otomatis dari setiap kejadian uang atau stok (atau manual oleh akuntan), selalu milik satu Outlet atau Pusat.
+_Avoid_: Entri, posting, transaksi akuntansi
+
+**Bagan Akun**:
+Daftar akun milik Tenant yang berasal dari template resto; akun yang dipakai sistem tidak bisa dihapus.
+_Avoid_: COA, chart of accounts
+
+**Pusat**:
+Unit pembukuan Tenant yang bukan Outlet (dapur pusat, kantor), tempat biaya bersama dicatat dan bisa dialokasikan manual ke Outlet.
+_Avoid_: HQ, head office, kantor pusat
+
+**Biaya Operasional**:
+Pengeluaran di luar Bahan (gaji, sewa, listrik, gas) yang dicatat dengan kategori dan sumber dana, bisa dijadwalkan berulang.
+_Avoid_: Expense, beban (kecuali dalam istilah akun)
+
+**Tutup Buku**:
+Penguncian satu periode bulanan; koreksi atas periode terkunci dilakukan lewat jurnal penyesuaian di periode berjalan.
+_Avoid_: Closing, tutup bulan
+
+**Penjualan Diakui**:
+Saat Tagihan ditutup (lunas atau menjadi Piutang); HPP diakui lebih awal, saat stok dipotong.
+_Avoid_: Revenue recognition
