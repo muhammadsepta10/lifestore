@@ -131,3 +131,29 @@ _Avoid_: Stock take, hitung stok
 **HPP**:
 Biaya bahan dari barang yang terjual, dihitung dengan rata-rata tertimbang per Lokasi Stok.
 _Avoid_: COGS, modal
+
+## Pembelian
+
+**Supplier**:
+Pihak yang menjual Bahan ke Tenant; dikelola per Tenant beserta riwayat harga per Bahan.
+_Avoid_: Vendor, pemasok
+
+**Purchase Order**:
+Pesanan pembelian resmi ke Supplier dengan Lokasi Stok tujuan, yang bisa diterima sebagian dan bisa memerlukan persetujuan di atas batas nominal Tenant.
+_Avoid_: PO (boleh sebagai singkatan), pesanan (bertabrakan dengan Pesanan pelanggan)
+
+**Belanja Langsung**:
+Pembelian tanpa Purchase Order (misal ke pasar) yang dicatat dari nota dan langsung menambah stok.
+_Avoid_: Pembelian tunai, belanja pasar
+
+**Penerimaan Barang**:
+Pencatatan barang yang benar-benar datang beserta jumlah dan harga sebenarnya; harga ini yang dipakai untuk HPP.
+_Avoid_: Goods receipt, GRN
+
+**Hutang Dagang**:
+Kewajiban bayar ke Supplier atas pembelian tempo, dengan jatuh tempo dan bisa dicicil.
+_Avoid_: AP, utang supplier
+
+**Kas Kecil**:
+Dana tunai Outlet yang terpisah dari laci kasir, dipakai untuk pengeluaran kecil seperti Belanja Langsung.
+_Avoid_: Petty cash
