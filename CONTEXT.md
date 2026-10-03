@@ -97,3 +97,37 @@ _Avoid_: Sold out, kosong
 **Item Custom**:
 Item di luar Menu dengan nama dan harga yang diisi manual oleh peran yang diizinkan; tidak punya resep dan tidak memotong stok.
 _Avoid_: Open item, item manual
+
+## Stok
+
+**Bahan**:
+Barang yang disimpan dan dipakai untuk membuat Menu, dicatat dalam satuan dasar (gram, ml, pcs) dengan satuan beli yang punya konversi.
+_Avoid_: Bahan baku (kecuali membedakan dari Bahan Setengah Jadi), inventory item, SKU
+
+**Bahan Setengah Jadi**:
+Bahan yang dibuat sendiri secara batch dari Bahan lain (sambal, kaldu, adonan) lewat Produksi, dan punya resep sendiri.
+_Avoid_: WIP, prep item
+
+**Resep**:
+Daftar Bahan dan takarannya untuk satu Menu, Varian, atau pilihan Grup Pilihan; ditetapkan di Merek dan berlaku sama di semua Outlet.
+_Avoid_: BOM, komposisi
+
+**Produksi**:
+Kejadian membuat Bahan Setengah Jadi: Bahan pembentuk keluar dari stok, hasilnya masuk ke stok.
+_Avoid_: Prep, masak batch
+
+**Lokasi Stok**:
+Tempat stok disimpan: gudang milik Outlet (minimal satu default) atau dapur/gudang pusat milik Tenant yang bukan Outlet.
+_Avoid_: Gudang (ambigu), warehouse
+
+**Transfer**:
+Perpindahan Bahan antar Lokasi Stok dalam dua langkah, dikirim lalu diterima, dengan selisih tercatat.
+_Avoid_: Mutasi, kirim barang
+
+**Stock Opname**:
+Penghitungan fisik stok (penuh atau sebagian) yang menghasilkan penyesuaian sebesar selisihnya.
+_Avoid_: Stock take, hitung stok
+
+**HPP**:
+Biaya bahan dari barang yang terjual, dihitung dengan rata-rata tertimbang per Lokasi Stok.
+_Avoid_: COGS, modal
