@@ -423,3 +423,29 @@ _Avoid_: Fraud report, laporan fraud
 **Peringatan Risiko**:
 Push langsung ke pemilik dan manajer saat kejadian melewati ambang yang diatur pemilik (misal void/refund besar, selisih kas besar).
 _Avoid_: Alert fraud, alarm
+
+## Laporan
+
+**Dashboard**:
+Halaman ringkasan yang isinya ditentukan Peran: pemilik melihat semua Outlet, manajer satu Outlet langsung, kasir Shift-nya sendiri, dapur Stasiun-nya, gudang stok dan PO; angka hari ini diperbarui tiap sekitar 1 menit.
+_Avoid_: Beranda, home, panel
+
+**Rangkuman Harian**:
+Data penjualan, stok dan dapur yang dirangkum tiap malam per Outlet sehingga laporan hari-hari sebelumnya cepat dibuka; hari ini selalu dihitung dari data langsung.
+_Avoid_: Snapshot, cache laporan
+
+**Laporan Shift**:
+Rekap satu Shift: kas awal, penjualan per Metode Bayar, kas masuk/keluar, kas seharusnya, hasil Hitung Buta dan selisihnya, serta void dan diskon; dicetak saat tutup Shift dan tersimpan di riwayat.
+_Avoid_: Laporan kasir, closing report, X/Z report
+
+**Waktu Saji**:
+Lama dari Pesanan masuk ke dapur sampai ditandai siap di KDS, diukur per Stasiun, menu dan jam, dibanding target waktu per Outlet; tidak tersedia untuk dapur yang hanya memakai printer.
+_Avoid_: Cooking time, lead time
+
+**Margin Menu**:
+Harga jual Menu atau Varian dikurangi HPP resepnya, dalam rupiah dan persen.
+_Avoid_: Profit per menu, laba menu
+
+**Laporan Terjadwal**:
+Ringkasan harian, mingguan atau bulanan yang dikirim otomatis lewat email ke penerima yang dipilih, dengan lampiran Excel untuk mingguan dan bulanan.
+_Avoid_: Auto report, laporan otomatis
