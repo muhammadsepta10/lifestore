@@ -409,3 +409,17 @@ _Avoid_: Provider, gateway pesan
 **Jam Tenang**:
 Rentang 21.00–08.00 ketika promosi tidak dikirim; notifikasi layanan tetap dikirim.
 _Avoid_: Do not disturb
+
+## Audit
+
+**Log Audit**:
+Catatan append-only atas aksi sensitif dan perubahan penting (siapa, kapan, perangkat, Outlet, sebelum/sesudah, alasan, penyetuju); tidak bisa diubah atau dihapus siapa pun, disimpan 5 tahun.
+_Avoid_: Activity log, riwayat, history
+
+**Laporan Kecurigaan**:
+Ringkasan per kasir per periode (void, refund, Diskon Manual, buka laci, selisih Hitung Buta) dibanding rata-rata Outlet, menandai yang lebih dari 2× rata-rata atau berpola khusus.
+_Avoid_: Fraud report, laporan fraud
+
+**Peringatan Risiko**:
+Push langsung ke pemilik dan manajer saat kejadian melewati ambang yang diatur pemilik (misal void/refund besar, selisih kas besar).
+_Avoid_: Alert fraud, alarm
