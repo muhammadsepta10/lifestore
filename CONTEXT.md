@@ -363,7 +363,7 @@ _Avoid_: Gift card, voucher belanja, deposit
 ## Loyalti
 
 **Member**:
-Pelanggan yang nomor HP-nya terverifikasi OTP; keanggotaannya berlaku per Tenant di semua Merek dan Outlet.
+Pelanggan yang mendaftar dengan email terverifikasi OTP (nomor HP dicatat sebagai pengenal cepat di kasir); keanggotaannya berlaku per Tenant di semua Merek dan Outlet.
 _Avoid_: Anggota (itu staf), customer terdaftar
 
 **Poin**:
@@ -371,7 +371,7 @@ Saldo loyalti Member yang didapat saat Tagihan ditutup (default 1 per Rp10.000 s
 _Avoid_: Reward, koin, cashback
 
 **Penukaran Poin**:
-Pemakaian Poin untuk potongan rupiah atau hadiah katalog dengan verifikasi OTP; dicatat sebagai diskon, boleh digabung dengan Promo otomatis tapi tidak dengan Voucher Diskon.
+Pemakaian Poin untuk potongan rupiah atau hadiah katalog dengan verifikasi OTP lewat email; dicatat sebagai diskon, boleh digabung dengan Promo otomatis tapi tidak dengan Voucher Diskon.
 _Avoid_: Redeem, klaim
 
 **Tier**:
@@ -393,5 +393,19 @@ Aksi staf yang mengubah Reservasi menjadi Sesi Meja dan Tagihan, memasukkan Depo
 _Avoid_: Check-in, kedatangan
 
 **Daftar Tunggu**:
-Antrean tamu tanpa Reservasi saat Outlet penuh (nama, jumlah tamu, nomor HP), dipanggil lewat WhatsApp saat Meja kosong.
+Antrean tamu tanpa Reservasi saat Outlet penuh (nama, jumlah tamu); tamu memantau posisinya di halaman antrean yang berbunyi saat dipanggil.
 _Avoid_: Waiting list, antrean
+
+## Notifikasi
+
+**Notifikasi**:
+Pesan dari sistem lewat Saluran Notifikasi; fase awal hanya email (pelanggan dan pemilik) dan push/di-layar aplikasi (staf), tanpa WhatsApp atau SMS.
+_Avoid_: Pesan, alert, broadcast (kecuali promosi)
+
+**Saluran Notifikasi**:
+Lapisan pengiriman tunggal (email, push aplikasi, dan nanti WhatsApp) sehingga saluran baru bisa ditambahkan tanpa mengubah fitur yang mengirim.
+_Avoid_: Provider, gateway pesan
+
+**Jam Tenang**:
+Rentang 21.00–08.00 ketika promosi tidak dikirim; notifikasi layanan tetap dikirim.
+_Avoid_: Do not disturb
