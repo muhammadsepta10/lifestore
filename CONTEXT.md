@@ -339,12 +339,20 @@ Keadaan Tenant yang telat bayar 8–30 hari atau habis Masa Coba: kasir tetap bi
 _Avoid_: Suspend (itu tahap setelahnya), read-only
 
 **Komisi Transaksi**:
-Potongan platform atas pembayaran online lewat gateway yang dipisah otomatis dari Sub-akun Gateway; tidak ada untuk tunai dan metode manual.
+Potongan platform sebesar 0,2% dari setiap pembayaran online lewat gateway, sama untuk semua Paket Langganan. Potongan dipisah otomatis dari Sub-akun Gateway, di luar MDR, dan tidak berlaku untuk tunai, EDC, dan transfer manual.
 _Avoid_: Fee platform, MDR (itu biaya gateway)
 
 **Admin Platform**:
 Tim Lifestore yang mengelola Tenant lewat back-office; masuk sebagai Tenant hanya dengan izin pemilik dan selalu tercatat.
 _Avoid_: Superadmin, tim support
+
+**Add-on**:
+Tambahan berbayar di luar Paket Langganan: Lokasi Stok pusat atau dapur pusat tambahan (Rp99.000/bulan) dan Bantuan Setup untuk Dasar dan Pro (Rp500.000 sekali per Outlet). Agen Cetak, perangkat, dan Merek selalu gratis.
+_Avoid_: Modul tambahan, upsell
+
+**Harga Terkunci**:
+Harga normal saat Tenant mendaftar yang dijamin tidak naik selama 12 bulan untuk 100 Tenant pertama setelah diskon peluncuran 50% selama 6 bulan habis. Tenant dengan langganan tahunan yang sedang berjalan juga tidak terkena kenaikan sampai masa langganannya habis.
+_Avoid_: Grandfathering, harga lama
 
 ## Promo
 
