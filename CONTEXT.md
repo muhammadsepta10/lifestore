@@ -276,6 +276,14 @@ _Avoid_: Konflik, error sync
 Perangkat tambahan opsional di Outlet yang meneruskan pesanan dari kasir ke layar dapur lewat jaringan lokal saat internet mati; tanpa Hub Lokal, dapur memakai tiket cetak.
 _Avoid_: Server lokal, local server, gateway
 
+**Agen Cetak**:
+Program kecil yang dipasang di PC kasir Windows. Agen ini menerima byte cetak dari kasir lewat `127.0.0.1` dan meneruskannya ke printer struk, printer dapur (USB, LAN, Bluetooth), atau membuka laci kas. Tetap jalan tanpa internet. Kasir Android tidak membutuhkannya.
+_Avoid_: Print server, driver, plugin cetak
+
+**Backup Eksternal**:
+Salinan database harian beserta log perubahan yang dikirim ke bucket penyimpanan milik platform. Fitur ini mati secara default dan baru menyala setelah kredensial bucket dimasukkan.
+_Avoid_: Backup otomatis, cadangan
+
 ## Pajak
 
 **Profil Pajak**:
