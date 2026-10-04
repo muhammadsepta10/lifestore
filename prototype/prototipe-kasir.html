@@ -1,0 +1,444 @@
+<title>Prototipe Kasir Lifestore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: layar kasir tablet landscape; tiga variasi tata letak di atas satu data dan logika yang sama, dipilih lewat bilah bawah. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --surface-2:#e9eee8; --line:#d3dbd1;
+  --fg:#18231d; --muted:#5b6b62; --accent:#0f6e5a; --accent-ink:#ffffff; --accent-soft:#d6ebe3;
+  --warn:#b46a00; --warn-soft:#fbecd2; --busy:#a3364a; --busy-soft:#f7dde2; --ok:#2f7d32; --ok-soft:#dcefdc;
+  --bar:#18231d; --bar-ink:#f3f5f2;
+  --f-ui:"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101613; --surface:#18201c; --surface-2:#212b26; --line:#2f3b35;
+  --fg:#e6ede8; --muted:#97a69d; --accent:#4fbf9c; --accent-ink:#0b1410; --accent-soft:#1d3a31;
+  --warn:#f0b04a; --warn-soft:#3a2d16; --busy:#ef8a9c; --busy-soft:#3d2128; --ok:#7fcf83; --ok-soft:#1f3420;
+  --bar:#e6ede8; --bar-ink:#101613; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101613; --surface:#18201c; --surface-2:#212b26; --line:#2f3b35;
+  --fg:#e6ede8; --muted:#97a69d; --accent:#4fbf9c; --accent-ink:#0b1410; --accent-soft:#1d3a31;
+  --warn:#f0b04a; --warn-soft:#3a2d16; --busy:#ef8a9c; --busy-soft:#3d2128; --ok:#7fcf83; --ok-soft:#1f3420;
+  --bar:#e6ede8; --bar-ink:#101613; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14px;padding-inline:16px;padding-block:12px 96px}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+button.ghost{background:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.busy{background:var(--busy-soft);color:var(--busy)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+
+/* Kepala layar */
+.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em}
+.brand small{font-weight:600;color:var(--muted);font-size:13px;margin-left:8px}
+
+/* Item tagihan */
+.lines{display:flex;flex-direction:column;gap:2px}
+.line{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.line .meta{font-size:12px;color:var(--muted)}
+.qty{display:inline-flex;gap:4px;align-items:center}
+.qty button{padding:0 8px;line-height:22px;border-radius:6px}
+.totals{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px;padding-top:8px}
+.totals .grand{font-size:18px;font-weight:800}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.menu-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;min-height:72px;padding:10px}
+.menu-btn b{font-weight:700;line-height:1.25}
+.menu-btn.habis{opacity:.45;text-decoration:line-through}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border-radius:999px;padding:6px 12px}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+
+/* Variasi A: denah */
+.va{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:12px;align-items:start}
+.floor{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.zone-title{grid-column:1/-1;margin-top:4px}
+.table{height:96px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:10px;border:2px solid var(--line);text-align:left}
+.table b{font-size:20px;font-weight:800}
+.table.Kosong{background:var(--surface)}
+.table.Dipesan{background:var(--warn-soft);border-color:var(--warn)}
+.table.Terisi{background:var(--busy-soft);border-color:var(--busy)}
+.table.sel{outline:3px solid var(--accent);outline-offset:2px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:4px;border:2px solid var(--line);vertical-align:-2px;margin-right:4px}
+
+/* Variasi B: tiga kolom */
+.vb{display:grid;grid-template-columns:minmax(200px,240px) minmax(0,1fr) minmax(280px,340px);gap:12px;align-items:start}
+.bill-list{display:flex;flex-direction:column;gap:6px}
+.bill-item{text-align:left;display:grid;grid-template-columns:1fr auto;gap:2px 6px;padding:8px 10px}
+.bill-item[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+
+/* Variasi C: papan kanal */
+.vc-head{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.quick{flex:1 1 320px;display:flex;gap:8px}
+.quick input{flex:1;font-size:16px;padding:12px}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.col{background:var(--surface-2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:10px;text-align:left;display:flex;flex-direction:column;gap:4px;width:100%}
+.card.k-GoFood{border-left-color:#2e9e44}.card.k-GrabFood{border-left-color:#1b8f5a}.card.k-ShopeeFood{border-left-color:#e2572b}.card.k-Dine-in{border-left-color:var(--busy)}.card.k-Takeaway{border-left-color:var(--warn)}
+.drawer{margin-top:12px}
+
+/* Modal */
+.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--fg) 45%,transparent);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
+.modal{background:var(--surface);border-radius:14px;padding:16px;width:min(560px,100%);max-height:88vh;overflow:auto;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.modal h2{margin:0;font-size:18px}
+.paygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.paygrid button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;z-index:60;max-width:calc(100% - 32px);font-weight:600}
+
+/* Bilah pemilih variasi (bagian prototipe, bukan desain) */
+.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--bar);color:var(--bar-ink);border-radius:999px;display:flex;align-items:center;gap:4px;padding:6px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:50;max-width:calc(100% - 32px)}
+.switcher button{background:transparent;border:0;color:var(--bar-ink);font-weight:800;padding:6px 12px;border-radius:999px}
+.switcher button:hover{background:color-mix(in srgb,var(--bar-ink) 15%,transparent)}
+.switcher span{font-weight:700;font-size:13px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media (max-width:980px){.va,.vb{grid-template-columns:1fr}.board{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+<nav class="switcher" aria-label="Pilih variasi prototipe">
+  <button id="prev" aria-label="Variasi sebelumnya">‹</button>
+  <span id="vlabel"></span>
+  <button id="next" aria-label="Variasi berikutnya">›</button>
+</nav>
+
+<script>
+/* ===== Logika bersama (in-memory, prototipe) ===== */
+const rp = n => "Rp" + Math.round(n).toLocaleString("id-ID");
+const MENU = [
+  {id:"m1",cat:"Makanan",name:"Nasi Goreng Kampung",price:32000,var:["Tidak pedas","Pedas","Extra pedas"],st:"Wajan"},
+  {id:"m2",cat:"Makanan",name:"Ayam Bakar Madu",price:42000,st:"Bakar"},
+  {id:"m3",cat:"Makanan",name:"Mie Goreng Jawa",price:30000,var:["Tidak pedas","Pedas"],st:"Wajan"},
+  {id:"m4",cat:"Makanan",name:"Sop Buntut",price:68000,st:"Kuah"},
+  {id:"m5",cat:"Makanan",name:"Gado-gado",price:28000,st:"Dingin",habis:true},
+  {id:"m6",cat:"Camilan",name:"Tahu Cabe Garam",price:22000,st:"Wajan"},
+  {id:"m7",cat:"Camilan",name:"Pisang Goreng Keju",price:24000,st:"Wajan"},
+  {id:"m8",cat:"Camilan",name:"Kentang Goreng",price:20000,st:"Wajan"},
+  {id:"m9",cat:"Minuman",name:"Es Teh",price:8000,var:["Manis","Tawar","Less sugar"],st:"Bar"},
+  {id:"m10",cat:"Minuman",name:"Es Jeruk",price:14000,st:"Bar"},
+  {id:"m11",cat:"Minuman",name:"Kopi Susu Gula Aren",price:22000,var:["Es","Panas"],st:"Bar"},
+  {id:"m12",cat:"Minuman",name:"Air Mineral",price:6000,st:"Bar"},
+];
+const CATS = ["Semua","Makanan","Camilan","Minuman"];
+const OJOL = ["GoFood","GrabFood","ShopeeFood"];
+const METHODS = ["Tunai","QRIS dinamis","QRIS statis","EDC","Transfer"];
+const SERVICE = 0.05, PBJT = 0.10;
+
+let uid = 100;
+const S = {
+  online:true, queue:0, orderNo:41, notaNo:1203,
+  tables:[["A1",2],["A2",4],["A3",4],["A4",2],["A5",6],["A6",4],["B1",8],["B2",4],["B3",2],["B4",2]].map(([id,cap])=>({id,cap,status:"Kosong",bill:null,resv:null})),
+  bills:[], done:[],
+  shift:{kasir:"Rina",modal:300000,cash:0,nonCash:0,platform:0,cashOut:25000,voids:1,discounts:15000,closed:false,counted:null},
+  sel:null, cat:"Semua", q:"", selTable:null,
+};
+const T = id => S.tables.find(t=>t.id===id);
+const B = id => S.bills.find(b=>b.id===id) || S.done.find(b=>b.id===id);
+const M = id => MENU.find(m=>m.id===id);
+
+function newBill(kanal, table, extra={}){
+  const b = {id:"b"+(++uid), no:++S.orderNo, kanal, table:table||null, items:[], pays:[], name:extra.name||"", kode:extra.kode||"", status:"open", t:new Date()};
+  S.bills.push(b);
+  if(table){ const t=T(table); t.status="Terisi"; t.bill=b.id; }
+  bump(); return b;
+}
+function addItem(b, m, varian){
+  const same = b.items.find(i=>i.menu===m.id && i.varian===(varian||"") && !i.sent);
+  if(same) same.qty++; else b.items.push({u:"i"+(++uid), menu:m.id, name:m.name, varian:varian||"", price:m.price, qty:1, sent:false, st:m.st});
+  bump();
+}
+function totals(b){
+  const sub = b.items.reduce((s,i)=>s+i.price*i.qty,0);
+  const svc = b.kanal==="Dine-in" ? Math.round(sub*SERVICE) : 0;
+  const tax = Math.round((sub+svc)*PBJT);
+  const total = sub+svc+tax;
+  const paid = b.pays.reduce((s,p)=>s+p.amount,0);
+  return {sub,svc,tax,total,paid,due:Math.max(0,total-paid)};
+}
+function bump(){ if(!S.online) S.queue++; }
+function sendKitchen(b){
+  const fresh = b.items.filter(i=>!i.sent);
+  if(!fresh.length){ toast("Tidak ada item baru untuk dikirim."); return; }
+  fresh.forEach(i=>i.sent=true);
+  const st=[...new Set(fresh.map(i=>i.st))].join(", ");
+  bump();
+  toast(S.online ? `Terkirim ke dapur (${st}). KDS dan printer dapur menerima.` : `Offline: tiket dicetak di printer dapur (${st}). Masuk antrean Sinkron.`);
+}
+function closeBill(b){
+  b.status="paid"; b.nota = S.online ? "NT-"+(++S.notaNo) : null;
+  S.bills = S.bills.filter(x=>x.id!==b.id); S.done.unshift(b);
+  if(b.table){ const t=T(b.table); t.status="Kosong"; t.bill=null; }
+  if(S.sel===b.id) S.sel=null;
+  bump();
+}
+
+/* Data awal contoh */
+(function seed(){
+  const b1=newBill("Dine-in","A2"); addItem(b1,M("m1"),"Pedas"); addItem(b1,M("m9"),"Manis"); addItem(b1,M("m9"),"Manis"); addItem(b1,M("m6")); b1.items.forEach(i=>i.sent=true);
+  const b2=newBill("Dine-in","A5"); addItem(b2,M("m4")); addItem(b2,M("m2")); addItem(b2,M("m10")); b2.items.forEach(i=>i.sent=true); addItem(b2,M("m7"));
+  const b3=newBill("Takeaway",null,{name:"Pak Budi"}); addItem(b3,M("m3"),"Tidak pedas"); addItem(b3,M("m11"),"Es");
+  const b4=newBill("GoFood",null,{kode:"F-48213"}); addItem(b4,M("m1"),"Extra pedas"); addItem(b4,M("m9"),"Less sugar"); b4.items.forEach(i=>i.sent=true); b4.pays=[{m:"Piutang Platform",amount:totals(b4).total}]; b4.status="pickup";
+  T("B1").status="Dipesan"; T("B1").resv="Reservasi 19.00 · Bu Sari · 6 orang";
+  S.shift.cash=486000; S.shift.nonCash=742000; S.shift.platform=0;
+})();
+
+/* ===== Aksi bersama ===== */
+const A = {
+  sel: d=>{ S.sel=d.id; render(); },
+  table: d=>{ const t=T(d.id); S.selTable=t.id; if(t.bill) S.sel=t.bill; else S.sel=null; render(); },
+  openTable: d=>{ const b=newBill("Dine-in",d.id); S.sel=b.id; S.selTable=d.id; render(); },
+  seat: d=>{ const t=T(d.id); t.resv=null; t.status="Kosong"; A.openTable(d); toast("Tamu Datang: Sesi Meja dibuka."); },
+  newTakeaway: ()=>{ const b=newBill("Takeaway",null,{name:"Takeaway #"+(S.orderNo+1)}); S.sel=b.id; render(); },
+  newOjol: ()=>modalOjol(),
+  pickTable: ()=>modalTables(),
+  cat: d=>{ S.cat=d.id; render(); },
+  add: d=>{ const m=M(d.id); if(m.habis){ toast(m.name+" sedang Habis."); return; } const b=B(S.sel); if(!b){ toast("Pilih atau buat tagihan dulu."); return; } if(m.var) return modalVarian(m,b); addItem(b,m); render(); },
+  addVar: d=>{ const b=B(S.sel); addItem(b,M(d.id),d.v); closeModal(); render(); },
+  inc: d=>{ const b=B(S.sel); const i=b.items.find(x=>x.u===d.u); i.qty++; bump(); render(); },
+  dec: d=>{ const b=B(S.sel); const i=b.items.find(x=>x.u===d.u); if(i.sent){ modalVoid(b,i); return; } i.qty--; if(i.qty<=0) b.items=b.items.filter(x=>x!==i); bump(); render(); },
+  send: ()=>{ sendKitchen(B(S.sel)); render(); },
+  pay: ()=>modalPay(B(S.sel)),
+  split: ()=>modalSplit(B(S.sel)),
+  shift: ()=>modalShift(),
+  pickup: d=>{ const b=B(d.id); closeBill(b); toast("Pesanan "+b.kode+" diambil driver."); render(); },
+  online: ()=>{ S.online=!S.online; if(S.online && S.queue){ toast(`Sinkron selesai: ${S.queue} aksi terkirim, Nomor Nota resmi diberikan.`); S.done.forEach(b=>{ if(!b.nota) b.nota="NT-"+(++S.notaNo); }); S.queue=0; } render(); },
+  close: ()=>closeModal(),
+};
+
+/* ===== Komponen bersama ===== */
+function kanalLabel(b){ return b.kanal==="Dine-in" ? "Meja "+b.table : b.kanal==="Takeaway" ? (b.name||"Takeaway") : b.kanal+" · "+b.kode; }
+function statusPill(b){
+  if(b.status==="pickup") return '<span class="pill ok">Lunas · Siap Diambil</span>';
+  const t=totals(b); const unsent=b.items.some(i=>!i.sent);
+  if(!b.items.length) return '<span class="pill">Kosong</span>';
+  if(unsent) return '<span class="pill warn">Belum dikirim</span>';
+  if(t.paid>0) return '<span class="pill acc">Bayar sebagian</span>';
+  return '<span class="pill busy">Di dapur</span>';
+}
+function netPill(){
+  return `<button data-act="online" class="${S.online?'':'primary'}" title="Coba mode offline">${S.online?'● Online':'○ Offline'}${S.queue?` · ${S.queue} antre`:''}</button>`;
+}
+function topbar(extra=""){
+  return `<header class="topbar"><div class="brand">Warung Daun<small>Outlet Kemang · Shift ${S.shift.kasir}</small></div>
+  <div class="row">${extra}${netPill()}<button data-act="shift">Tutup Shift</button></div></header>`;
+}
+function menuGrid(){
+  const items = MENU.filter(m=>(S.cat==="Semua"||m.cat===S.cat) && (!S.q || m.name.toLowerCase().includes(S.q.toLowerCase())));
+  return `<div class="tabs" role="group" aria-label="Kategori">${CATS.map(c=>`<button data-act="cat" data-id="${c}" aria-pressed="${S.cat===c}">${c}</button>`).join("")}</div>
+  <div class="menu-grid" style="margin-top:10px">${items.map(m=>`<button class="menu-btn ${m.habis?'habis':''}" data-act="add" data-id="${m.id}"><b>${m.name}</b><span class="num muted">${rp(m.price)}</span>${m.var?'<span class="pill">Varian</span>':''}${m.habis?'<span class="pill busy">Habis</span>':''}</button>`).join("")}</div>`;
+}
+function billBody(b, compact){
+  if(!b) return `<p class="muted">Pilih meja atau tagihan untuk melihat isinya.</p>`;
+  const t=totals(b); const ojol=OJOL.includes(b.kanal);
+  const lines=b.items.map(i=>`<div class="line"><div><b>${i.name}</b>${i.varian?` <span class="muted">· ${i.varian}</span>`:''}<div class="meta">${i.sent?'Terkirim ke '+i.st:'Belum dikirim'} · ${rp(i.price)}</div></div>
+    <div class="qty">${b.status==="open"?`<button data-act="dec" data-u="${i.u}" aria-label="Kurangi">−</button>`:''}<span class="num">${i.qty}</span>${b.status==="open"?`<button data-act="inc" data-u="${i.u}" aria-label="Tambah">+</button>`:''}</div></div>`).join("");
+  const pays=b.pays.map(p=>`<span class="muted">Dibayar ${p.m}</span><span class="num">${rp(p.amount)}</span>`).join("");
+  return `<div class="spread"><div><div class="label">${b.kanal} · Pesanan #${b.no}</div><div style="font-weight:800;font-size:17px">${kanalLabel(b)}</div></div>${statusPill(b)}</div>
+  <div class="lines">${lines||'<p class="muted">Belum ada item. Ketuk menu untuk menambah.</p>'}</div>
+  <div class="totals"><span class="muted">Subtotal</span><span class="num">${rp(t.sub)}</span>
+  ${t.svc?`<span class="muted">Service 5%</span><span class="num">${rp(t.svc)}</span>`:''}
+  <span class="muted">PBJT 10%</span><span class="num">${rp(t.tax)}</span>${pays}
+  <span class="grand">${t.paid?'Sisa':'Total'}</span><span class="grand num">${rp(t.paid?t.due:t.total)}</span></div>
+  ${b.status==="open"?`<div class="row" style="margin-top:8px">
+    <button data-act="send" ${b.items.some(i=>!i.sent)?'':'disabled'}>Kirim ke dapur</button>
+    <button data-act="split" ${b.items.length>1?'':'disabled'}>Pisah tagihan</button>
+    <button class="primary" data-act="pay" ${t.total?'':'disabled'} style="flex:1">Bayar ${rp(t.due)}</button></div>`
+  : b.status==="pickup"?`<button class="primary" data-act="pickup" data-id="${b.id}" style="margin-top:8px">Sudah diambil driver</button>`:''}`;
+}
+
+/* ===== Variasi A: denah meja ===== */
+function VariantA(){
+  const b=B(S.sel);
+  const zones=[["A","Ruang dalam"],["B","Teras"]];
+  const others=S.bills.filter(x=>!x.table);
+  return topbar(`<button data-act="newTakeaway">+ Takeaway</button><button data-act="newOjol">+ Pesanan ojol</button>`)+
+  `<div class="va"><section class="stack">
+    <div class="legend"><span><i class="sw" style="background:var(--surface)"></i>Kosong</span><span><i class="sw" style="background:var(--warn-soft);border-color:var(--warn)"></i>Dipesan</span><span><i class="sw" style="background:var(--busy-soft);border-color:var(--busy)"></i>Terisi</span></div>
+    <div class="floor">${zones.map(([z,name])=>`<div class="label zone-title">${name}</div>`+S.tables.filter(t=>t.id.startsWith(z)).map(t=>{
+      const bb=t.bill&&B(t.bill); const tt=bb&&totals(bb);
+      return `<button class="table ${t.status} ${S.selTable===t.id?'sel':''}" data-act="table" data-id="${t.id}"><b>${t.id}</b><span class="muted" style="font-size:12px">${t.status==="Terisi"?`<span class="num">${rp(tt.total)}</span>`:t.status==="Dipesan"?"Dipesan 19.00":t.cap+" kursi"}</span></button>`;}).join("")).join("")}</div>
+    ${others.length?`<div class="label" style="margin-top:8px">Di luar meja</div><div class="row">${others.map(x=>`<button data-act="sel" data-id="${x.id}" aria-pressed="${S.sel===x.id}">${kanalLabel(x)} ${statusPill(x)}</button>`).join("")}</div>`:''}
+  </section>
+  <aside class="panel stack">${sideA(b)}</aside></div>`;
+}
+function sideA(b){
+  const t=S.selTable&&T(S.selTable);
+  if(!b && t){
+    if(t.status==="Dipesan") return `<div class="label">Meja ${t.id}</div><p>${t.resv}</p><button class="primary" data-act="seat" data-id="${t.id}">Tamu Datang, buka meja</button>`;
+    return `<div class="label">Meja ${t.id} · ${t.cap} kursi</div><p class="muted">Meja kosong.</p><button class="primary" data-act="openTable" data-id="${t.id}">Buka Tagihan</button>`;
+  }
+  if(!b) return `<div class="label">Tagihan</div><p class="muted">Ketuk meja di denah untuk membuka atau melihat tagihan.</p>`;
+  return billBody(b)+(b.status==="open"?`<details open><summary class="label" style="cursor:pointer">Tambah item</summary><div style="margin-top:8px">${menuGrid()}</div></details>`:'');
+}
+
+/* ===== Variasi B: tiga kolom POS ===== */
+function VariantB(){
+  const b=B(S.sel);
+  const groups=[["Dine-in",S.bills.filter(x=>x.kanal==="Dine-in")],["Takeaway",S.bills.filter(x=>x.kanal==="Takeaway")],["Ojol",S.bills.filter(x=>OJOL.includes(x.kanal))]];
+  return topbar()+`<div class="vb">
+  <aside class="panel stack"><div class="spread"><span class="label">Tagihan terbuka</span><span class="pill num">${S.bills.length}</span></div>
+    <div class="row"><button data-act="pickTable" style="flex:1">+ Meja</button><button data-act="newTakeaway" style="flex:1">+ Bawa</button><button data-act="newOjol" style="flex:1">+ Ojol</button></div>
+    ${groups.map(([g,list])=>`<div class="label" style="margin-top:6px">${g}</div><div class="bill-list">${list.map(x=>`<button class="bill-item" data-act="sel" data-id="${x.id}" aria-pressed="${S.sel===x.id}"><b>${kanalLabel(x)}</b><span class="num">${rp(totals(x).due||totals(x).total)}</span><span>${statusPill(x)}</span></button>`).join("")||'<span class="muted">Tidak ada</span>'}</div>`).join("")}
+  </aside>
+  <section class="panel stack"><input id="q" placeholder="Cari menu…" value="${S.q}" aria-label="Cari menu">${menuGrid()}</section>
+  <aside class="panel stack">${billBody(b)}</aside></div>`;
+}
+
+/* ===== Variasi C: papan per kanal + input cepat ===== */
+function VariantC(){
+  const b=B(S.sel);
+  const col=(title,list,hint)=>`<div class="col"><div class="spread"><span class="label">${title}</span><span class="pill num">${list.length}</span></div>${list.map(x=>{const t=totals(x);return `<button class="card k-${x.kanal}" data-act="sel" data-id="${x.id}" ${S.sel===x.id?'style="outline:2px solid var(--accent)"':''}><span class="spread"><b>${kanalLabel(x)}</b><span class="num">${rp(t.due||t.total)}</span></span><span class="muted" style="font-size:12px">${x.items.reduce((s,i)=>s+i.qty,0)} item · #${x.no}</span>${x.status==="pickup"?statusPill(x):''}</button>`;}).join("")||`<span class="muted">${hint}</span>`}</div>`;
+  const draft=S.bills.filter(x=>x.status==="open"&&(x.items.some(i=>!i.sent)||!x.items.length));
+  const kitchen=S.bills.filter(x=>x.status==="open"&&x.items.length&&!x.items.some(i=>!i.sent));
+  const pickup=S.bills.filter(x=>x.status==="pickup");
+  return topbar()+`<div class="vc-head">
+    <div class="row"><button data-act="pickTable">Meja</button><button data-act="newTakeaway">Takeaway</button>${OJOL.map(o=>`<button data-act="newOjol" data-p="${o}">${o}</button>`).join("")}</div>
+    <form class="quick" id="quick"><input id="qc" placeholder="${b&&b.status==='open'?'Ketik nama menu lalu Enter, misal: es teh':'Pilih kartu dulu, lalu ketik menu'}" aria-label="Input cepat menu" autocomplete="off"><button class="primary">Tambah</button></form></div>
+  <div class="board">${col("Sedang diinput",draft,"Kosong")}${col("Di dapur / makan",kitchen,"Kosong")}${col("Ojol siap diambil",pickup,"Kosong")}</div>
+  ${b?`<section class="panel drawer stack">${billBody(b)}</section>`:''}`;
+}
+
+/* ===== Modal ===== */
+function openModal(html){ document.getElementById("modal").innerHTML=`<div class="scrim" data-scrim><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; const f=document.querySelector(".modal input,.modal button.primary"); f&&f.focus(); }
+function closeModal(){ document.getElementById("modal").innerHTML=""; }
+function modalVarian(m,b){
+  openModal(`<h2>${m.name}</h2><p class="muted">Pilih varian untuk ${kanalLabel(b)}.</p><div class="paygrid">${m.var.map(v=>`<button data-act="addVar" data-id="${m.id}" data-v="${v}">${v}</button>`).join("")}</div><button class="ghost" data-act="close">Batal</button>`);
+}
+function modalVoid(b,i){
+  openModal(`<h2>Batalkan ${i.name}?</h2><p>Item ini sudah dikirim ke dapur. Pembatalan butuh <b>Persetujuan Atasan</b> dan dicatat sebagai Waste di Log Audit.</p>
+  <label class="stack"><span class="label">Alasan</span><select id="vreason"><option>Salah input</option><option>Tamu batal</option><option>Lama tidak keluar</option></select></label>
+  <label class="stack"><span class="label">PIN atasan</span><input id="vpin" inputmode="numeric" maxlength="6" placeholder="Contoh: 1234"></label>
+  <div class="row"><button class="ghost" data-act="close">Kembali</button><button class="primary" id="vok">Batalkan item</button></div>`);
+  document.getElementById("vok").onclick=()=>{ if(document.getElementById("vpin").value.length<4){ toast("Masukkan PIN atasan (contoh: 1234)."); return; } i.qty--; if(i.qty<=0) b.items=b.items.filter(x=>x!==i); S.shift.voids++; bump(); closeModal(); toast("Item dibatalkan, tercatat sebagai Waste."); render(); };
+}
+function modalTables(){
+  const free=S.tables.filter(t=>t.status!=="Terisi");
+  openModal(`<h2>Pilih meja</h2><div class="paygrid">${free.map(t=>`<button data-tb="${t.id}">${t.id} · ${t.cap} kursi${t.status==="Dipesan"?' (dipesan)':''}</button>`).join("")}</div><button class="ghost" data-act="close">Batal</button>`);
+  document.querySelectorAll("[data-tb]").forEach(el=>el.onclick=()=>{ const t=T(el.dataset.tb); t.resv=null; closeModal(); A.openTable({id:t.id}); });
+}
+function modalOjol(pre){
+  let plat=pre||"GoFood";
+  const draw=()=>openModal(`<h2>Pesanan ojol</h2><p class="muted">Salin dari tablet ${plat}. Tagihan langsung lunas lewat Piutang Platform.</p>
+  <div class="tabs">${OJOL.map(o=>`<button data-pl="${o}" aria-pressed="${o===plat}">${o}</button>`).join("")}</div>
+  <label class="stack"><span class="label">Kode Pesanan Platform</span><input id="okode" placeholder="Contoh: F-48219" autocomplete="off"></label>
+  <label class="stack"><span class="label">Nama pemesan (opsional)</span><input id="oname" placeholder="Nama di aplikasi"></label>
+  <div class="row"><button class="ghost" data-act="close">Batal</button><button class="primary" id="ook">Buat pesanan, lalu pilih menu</button></div>`);
+  draw();
+  const wire=()=>{ document.querySelectorAll("[data-pl]").forEach(el=>el.onclick=()=>{ plat=el.dataset.pl; draw(); wire(); });
+    document.getElementById("ook").onclick=()=>{ const k=document.getElementById("okode").value.trim(); if(!k){ toast("Kode Pesanan Platform wajib diisi."); return; }
+      const b=newBill(plat,null,{kode:k,name:document.getElementById("oname").value}); b.isOjol=true; S.sel=b.id; closeModal(); toast("Pilih menu, lalu tekan Bayar untuk mencatat Piutang Platform."); render(); }; };
+  wire();
+}
+function modalSplit(b){
+  openModal(`<h2>Pisah tagihan</h2><p class="muted">Centang item yang pindah ke tagihan baru (misal tamu yang bayar sendiri). Pajak dihitung ulang per tagihan.</p>
+  <div class="stack">${b.items.map(i=>`<label class="row"><input type="checkbox" value="${i.u}"> <span>${i.qty}× ${i.name}${i.varian?' · '+i.varian:''}</span><span class="num muted" style="margin-left:auto">${rp(i.price*i.qty)}</span></label>`).join("")}</div>
+  <div class="row"><button class="ghost" data-act="close">Batal</button><button class="primary" id="sok">Pindahkan ke tagihan baru</button></div>`);
+  document.getElementById("sok").onclick=()=>{ const ids=[...document.querySelectorAll(".modal input:checked")].map(x=>x.value); if(!ids.length||ids.length===b.items.length){ toast("Pilih sebagian item saja."); return; }
+    const nb={id:"b"+(++uid),no:++S.orderNo,kanal:b.kanal,table:b.table,items:b.items.filter(i=>ids.includes(i.u)),pays:[],name:(b.name||"")+" (pisah)",kode:b.kode,status:"open",t:new Date()};
+    b.items=b.items.filter(i=>!ids.includes(i.u)); S.bills.push(nb); S.sel=nb.id; bump(); closeModal(); toast("Tagihan dipisah. Yang baru sedang dibuka."); render(); };
+}
+function modalPay(b){
+  const ojol=OJOL.includes(b.kanal);
+  let method=ojol?"Piutang Platform":"Tunai"; let amt="";
+  const draw=()=>{ const t=totals(b); const cashRound = method==="Tunai" ? Math.round(t.due/100)*100 : t.due;
+    const avail = ojol?["Piutang Platform"]:METHODS;
+    openModal(`<h2>Bayar ${kanalLabel(b)}</h2>
+    <div class="totals"><span class="muted">Total</span><span class="num">${rp(t.total)}</span>${b.pays.map(p=>`<span class="muted">${p.m}</span><span class="num">−${rp(p.amount)}</span>`).join("")}<span class="grand">Sisa</span><span class="grand num">${rp(t.due)}</span></div>
+    <div class="paygrid">${avail.map(m=>`<button data-m="${m}" aria-pressed="${m===method}" ${m==="QRIS dinamis"&&!S.online?'disabled title="Butuh internet"':''}>${m}</button>`).join("")}</div>
+    ${!S.online&&!ojol?'<p class="muted" style="margin:0">Offline: QRIS dinamis tidak tersedia. Metode lain tetap jalan dan disinkron nanti.</p>':''}
+    ${method==="Tunai"?`<label class="stack"><span class="label">Uang diterima</span><input id="pamt" class="num" inputmode="numeric" value="${amt}" placeholder="${cashRound}"></label>
+      <div class="row">${[cashRound,50000,100000,200000].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<button data-q="${v}" class="num">${rp(v)}</button>`).join("")}</div>
+      ${cashRound!==t.due?`<p class="muted" style="margin:0">Pembulatan Tunai: ${rp(cashRound-t.due)}</p>`:''}`
+    : method==="Piutang Platform"?`<p class="muted" style="margin:0">Dicatat sebagai Piutang ${b.kanal}. Komisi Platform diperkirakan saat tutup tagihan, disesuaikan saat dana cair.</p>`
+    : `<label class="stack"><span class="label">Nominal ${method}</span><input id="pamt" class="num" inputmode="numeric" value="${amt}" placeholder="${t.due}"></label><p class="muted" style="margin:0">Kosongkan untuk melunasi sisa. Isi sebagian untuk bayar campuran.</p>`}
+    <div class="row"><button class="ghost" data-act="close">Batal</button><button class="primary" id="pok" style="flex:1">${method==="QRIS dinamis"?"Tampilkan QR dan tunggu":"Terima pembayaran"}</button></div>`);
+    document.querySelectorAll("[data-m]").forEach(el=>el.onclick=()=>{ method=el.dataset.m; amt=""; draw(); });
+    document.querySelectorAll("[data-q]").forEach(el=>el.onclick=()=>{ amt=el.dataset.q; draw(); });
+    document.getElementById("pok").onclick=()=>{
+      const t=totals(b); const raw=document.getElementById("pamt"); let v= raw&&raw.value? parseInt(raw.value.replace(/\D/g,""),10) : (method==="Tunai"?cashRound:t.due);
+      if(!v||v<=0){ toast("Isi nominal pembayaran."); return; }
+      let change=0;
+      if(method==="Tunai"){ if(v>=cashRound){ change=v-cashRound; v=t.due; } else if(v>t.due){ v=t.due; } S.shift.cash+=Math.min(v,t.due); }
+      else if(method==="Piutang Platform"){ v=t.due; }
+      else { v=Math.min(v,t.due); S.shift.nonCash+=v; }
+      b.pays.push({m:method,amount:v}); bump();
+      if(totals(b).due<=0){
+        if(ojol){ b.status="pickup"; if(b.items.some(i=>!i.sent)) sendKitchen(b); closeModal(); toast("Lunas lewat Piutang Platform. Masuk daftar Siap Diambil."); render(); return; }
+        closeBill(b); closeModal(); toast(`Lunas.${change?` Kembalian ${rp(change)}.`:''} Struk dicetak${b.nota?' dengan Nomor Nota '+b.nota:' dengan Nomor Pesanan perangkat'}.`); render();
+      } else { amt=""; method="Tunai"; draw(); toast(`Diterima ${rp(v)}. Sisa ${rp(totals(b).due)}.`); }
+    };
+  };
+  draw();
+}
+function modalShift(){
+  const sh=S.shift; const expected=sh.modal+sh.cash-sh.cashOut;
+  openModal(`<h2>Tutup Shift · ${sh.kasir}</h2>
+  <p class="muted" style="margin:0">Hitung Buta: hitung uang di laci dulu. Angka seharusnya baru muncul setelah kamu mengisi.</p>
+  <label class="stack"><span class="label">Uang tunai di laci</span><input id="cnt" class="num" inputmode="numeric" placeholder="Contoh: 760000"></label>
+  <div id="shres"></div>
+  <div class="row"><button class="ghost" data-act="close">Batal</button><button class="primary" id="shok" style="flex:1">Kunci hitungan</button></div>`);
+  document.getElementById("shok").onclick=()=>{ const v=parseInt((document.getElementById("cnt").value||"").replace(/\D/g,""),10); if(isNaN(v)){ toast("Isi hasil hitungan dulu."); return; }
+    const diff=v-expected; S.bills.length;
+    document.getElementById("shres").innerHTML=`<div class="totals">
+      <span class="muted">Modal awal</span><span class="num">${rp(sh.modal)}</span>
+      <span class="muted">Penjualan tunai</span><span class="num">${rp(sh.cash)}</span>
+      <span class="muted">Kas keluar</span><span class="num">−${rp(sh.cashOut)}</span>
+      <span>Seharusnya</span><span class="num">${rp(expected)}</span>
+      <span>Dihitung</span><span class="num">${rp(v)}</span>
+      <span class="grand">Selisih</span><span class="grand num" style="color:${diff===0?'var(--ok)':'var(--busy)'}">${diff>0?'+':''}${rp(diff)}</span>
+      <span class="muted">Non-tunai</span><span class="num">${rp(sh.nonCash)}</span>
+      <span class="muted">Void / diskon</span><span class="num">${sh.voids} · ${rp(sh.discounts)}</span></div>
+      ${S.bills.filter(b=>b.status==="open").length?`<p class="pill warn" style="margin:0">${S.bills.filter(b=>b.status==="open").length} tagihan masih terbuka, akan pindah ke shift berikutnya.</p>`:''}
+      <p class="muted" style="margin:0">Laporan Shift dicetak di printer struk dan tersimpan di riwayat.</p>`;
+    document.getElementById("cnt").disabled=true; const btn=document.getElementById("shok"); btn.textContent="Selesai"; btn.onclick=closeModal; };
+}
+let toastT;
+function toast(msg){ const el=document.getElementById("toast"); el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,3200); }
+
+/* ===== Pemilih variasi (bagian prototipe) ===== */
+const VARIANTS=[["A","Denah meja dulu",VariantA],["B","Tiga kolom POS",VariantB],["C","Papan per kanal",VariantC]];
+let vi=Math.max(0,VARIANTS.findIndex(v=>"#"+v[0]===location.hash));
+function render(){
+  const [k,name,fn]=VARIANTS[vi];
+  const focusId=document.activeElement&&document.activeElement.id; const pos=document.activeElement&&document.activeElement.selectionStart;
+  document.getElementById("app").innerHTML=fn();
+  document.getElementById("vlabel").textContent=`${k} · ${name}`;
+  const q=document.getElementById("q"); if(q) q.oninput=e=>{ S.q=e.target.value; render(); };
+  const qf=document.getElementById("quick"); if(qf) qf.onsubmit=e=>{ e.preventDefault(); const v=document.getElementById("qc").value.trim().toLowerCase(); const b=B(S.sel);
+    if(!b||b.status!=="open"){ toast("Pilih kartu tagihan atau buat pesanan dulu."); return; }
+    const m=MENU.find(x=>x.name.toLowerCase().includes(v)); if(!v||!m){ toast("Menu tidak ditemukan."); return; }
+    if(m.habis){ toast(m.name+" sedang Habis."); return; }
+    if(m.var){ modalVarian(m,b); return; } addItem(b,m); render(); document.getElementById("qc").focus(); };
+  if(focusId){ const el=document.getElementById(focusId); if(el&&el.tagName==="INPUT"){ el.focus(); try{el.setSelectionRange(pos,pos);}catch(e){} } }
+}
+function go(d){ vi=(vi+d+VARIANTS.length)%VARIANTS.length; history.replaceState(null,"","#"+VARIANTS[vi][0]); render(); }
+document.getElementById("prev").onclick=()=>go(-1);
+document.getElementById("next").onclick=()=>go(1);
+document.addEventListener("keydown",e=>{ const t=e.target; if(t.closest&&t.closest("input,textarea,select,[contenteditable]")) return; if(document.querySelector(".scrim")){ if(e.key==="Escape") closeModal(); return; } if(e.key==="ArrowLeft") go(-1); if(e.key==="ArrowRight") go(1); });
+document.addEventListener("click",e=>{
+  if(e.target.matches("[data-scrim]")){ closeModal(); return; }
+  const el=e.target.closest("[data-act]"); if(!el) return;
+  const act=el.dataset.act;
+  if(act==="newOjol" && el.dataset.p){ modalOjol(el.dataset.p); return; }
+  A[act]&&A[act](el.dataset);
+});
+S.sel=S.bills[0].id; S.selTable="A2";
+render();
+</script>
