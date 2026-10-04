@@ -253,6 +253,26 @@ fieldset.grp{border:0;margin:0;padding:0}
 .meter div{height:100%;background:var(--accent);transition:width .4s}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Palet berwarna terinspirasi aplikasi modern minimalis: Toast POS (oranye hangat), Wise (hijau limau), Stripe (indigo-cyan). "polos" = token asli. */
+:root[data-palette="hangat"]{--bg:#fbf7f3;--surface:#ffffff;--surface-2:#f5ede6;--line:#ece1d7;--line-strong:#dccbbd;--fg:#1f1410;--muted:#6f5d52;--faint:#a8968a;--accent:#e5480b;--accent-ink:#ffffff;--accent-soft:#ffe7dc;--accent-2:#ffb020}
+:root[data-palette="limau"]{--bg:#f3f6ef;--surface:#ffffff;--surface-2:#e9efe2;--line:#dde6d3;--line-strong:#c4d3b5;--fg:#163300;--muted:#55693f;--faint:#94a684;--accent:#1f4a00;--accent-ink:#c7f59e;--accent-soft:#dcf7c4;--accent-2:#9fe870}
+:root[data-palette="indigo"]{--bg:#f6f9fc;--surface:#ffffff;--surface-2:#eef2f8;--line:#e3e8ef;--line-strong:#cfd7e3;--fg:#0a2540;--muted:#425466;--faint:#8898aa;--accent:#635bff;--accent-ink:#ffffff;--accent-soft:#ecebff;--accent-2:#00d4ff}
+@media (prefers-color-scheme: dark){
+:root[data-palette="hangat"]:not([data-theme="light"]){--bg:#16100c;--surface:#1f1712;--surface-2:#2a1f18;--line:#36291f;--line-strong:#4a382b;--fg:#fbefe7;--muted:#c4ab9b;--faint:#866f61;--accent:#ff7a45;--accent-ink:#1a0a03;--accent-soft:#43200f;--accent-2:#ffc054}
+:root[data-palette="limau"]:not([data-theme="light"]){--bg:#0e1a07;--surface:#15240c;--surface-2:#1c2f11;--line:#263d18;--line-strong:#345221;--fg:#ecf7e2;--muted:#a9c194;--faint:#6f8a5d;--accent:#9fe870;--accent-ink:#163300;--accent-soft:#24410f;--accent-2:#9fe870}
+:root[data-palette="indigo"]:not([data-theme="light"]){--bg:#0a1628;--surface:#0f1f36;--surface-2:#152844;--line:#1e3352;--line-strong:#2b4467;--fg:#f0f4fa;--muted:#a3b3c7;--faint:#6b7f99;--accent:#8f88ff;--accent-ink:#0a0a2a;--accent-soft:#24245a;--accent-2:#4fe0ff}}
+:root[data-palette="hangat"][data-theme="dark"]{--bg:#16100c;--surface:#1f1712;--surface-2:#2a1f18;--line:#36291f;--line-strong:#4a382b;--fg:#fbefe7;--muted:#c4ab9b;--faint:#866f61;--accent:#ff7a45;--accent-ink:#1a0a03;--accent-soft:#43200f;--accent-2:#ffc054}
+:root[data-palette="limau"][data-theme="dark"]{--bg:#0e1a07;--surface:#15240c;--surface-2:#1c2f11;--line:#263d18;--line-strong:#345221;--fg:#ecf7e2;--muted:#a9c194;--faint:#6f8a5d;--accent:#9fe870;--accent-ink:#163300;--accent-soft:#24410f;--accent-2:#9fe870}
+:root[data-palette="indigo"][data-theme="dark"]{--bg:#0a1628;--surface:#0f1f36;--surface-2:#152844;--line:#1e3352;--line-strong:#2b4467;--fg:#f0f4fa;--muted:#a3b3c7;--faint:#6b7f99;--accent:#8f88ff;--accent-ink:#0a0a2a;--accent-soft:#24245a;--accent-2:#4fe0ff}
+/* Sentuhan warna: cahaya lembut di atas halaman, kepala halaman bergradasi, tombol utama bergradasi */
+:root:not([data-palette="polos"]) body{background:radial-gradient(900px 360px at 10% -120px,color-mix(in srgb,var(--accent) 14%,transparent),transparent 70%),radial-gradient(700px 300px at 95% -100px,color-mix(in srgb,var(--accent-2) 16%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
+:root:not([data-palette="polos"]) :is(.top,.topbar,.hd){background:linear-gradient(120deg,var(--accent-soft),color-mix(in srgb,var(--accent-2) 20%,var(--surface)));border:0;border-radius:var(--radius);padding:14px 18px}
+:root:not([data-palette="polos"]) :is(button.primary,.btn.primary){background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 72%,var(--accent-2)));border-color:transparent;box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 28%,transparent)}
+[hidden]{display:none!important}
+.palet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:6px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow)}
+.palet.atas{bottom:auto;left:auto;right:max(12px,calc(50% - 203px));transform:none;top:calc(var(--top) + 8px)}
+.palet button{width:22px;height:22px;min-height:0;min-width:0;padding:0;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line-strong);cursor:pointer}
+.palet button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--fg)}
 </style>
 
 <div class="topstrip">
@@ -884,4 +904,12 @@ setInterval(()=>{
 }, 1000);
 history.replaceState(null,"","#"+VARIANTS[vi][0]);
 render();
+(function(){/* Pemilih palet warna (prototipe) */
+  const P=[["hangat","Oranye hangat (ala Toast POS)","linear-gradient(135deg,#e5480b,#ffb020)"],["limau","Hijau limau (ala Wise)","linear-gradient(135deg,#163300,#9fe870)"],["indigo","Indigo cyan (ala Stripe)","linear-gradient(135deg,#635bff,#00d4ff)"],["polos","Polos (versi sebelumnya)","linear-gradient(135deg,#127a5f,#e3f2ec)"]];
+  let cur="hangat";try{const s=localStorage.getItem("lifestore-palet");if(P.some(p=>p[0]===s))cur=s}catch(e){}
+  const nav=document.createElement("div");nav.className="palet";nav.setAttribute("role","group");nav.setAttribute("aria-label","Pilih palet warna");
+  const set=k=>{cur=k;document.documentElement.dataset.palette=k;try{localStorage.setItem("lifestore-palet",k)}catch(e){}nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===k)))};
+  P.forEach(([k,t,g])=>{const b=document.createElement("button");b.type="button";b.dataset.p=k;b.title=t;b.setAttribute("aria-label",t);b.style.background=g;b.addEventListener("click",()=>set(k));nav.appendChild(b)});
+  if(document.querySelector(".topstrip"))nav.classList.add("atas");document.body.appendChild(nav);set(cur);
+})();
 </script>
