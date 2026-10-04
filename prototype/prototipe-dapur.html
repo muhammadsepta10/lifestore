@@ -1,216 +1,362 @@
 <title>Prototipe Dapur Lifestore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
-/* Lifestore: token desain bersama (modern, minimalis). Satu aksen hijau daun, netral sedikit kehijauan, garis tipis, tanpa bayangan berat. */
+/* Lifestore design system v3: kanvas hijau mint lembut, kartu putih membulat, pastel per kategori/stasiun, pil status berwarna. */
 :root{
-  --bg:#f7f8f7; --surface:#ffffff; --surface-2:#f0f2f0; --line:#e3e7e3; --line-strong:#cfd6cf;
-  --fg:#111814; --muted:#66736b; --faint:#9aa59e;
-  --accent:#127a5f; --accent-ink:#ffffff; --accent-soft:#e3f2ec;
-  --warn:#b26b00; --warn-soft:#fff3df; --danger:#c2364d; --danger-soft:#fde8ec; --ok:#2e7d4f; --ok-soft:#e5f4ea;
-  --radius:14px; --radius-sm:10px;
-  --shadow:0 1px 2px rgba(17,24,20,.04), 0 8px 24px rgba(17,24,20,.06);
-  --f-ui:"Geist", "Segoe UI", system-ui, sans-serif;
-  --f-num:"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bg:#eef3f1; --surface:#ffffff; --surface-2:#f4f7f6; --line:#e6ecea; --line-strong:#d3dcd9;
+  --fg:#14201c; --muted:#64736d; --faint:#9aa8a2;
+  --accent:#0f9f7f; --accent-ink:#fff; --accent-soft:#dff5ee; --accent-strong:#0b7d64;
+  --ink:#14201c; --ink-fg:#ffffff;
+  --warn:#c27803; --warn-soft:#fff1d6; --danger:#e0445c; --danger-soft:#ffe3e8;
+  --ok:#16a34a; --ok-soft:#dcfce7; --info:#2f6fe4; --info-soft:#e0ebff;
+  --radius:20px; --radius-md:14px; --radius-sm:10px;
+  --shadow:0 1px 2px rgba(16,40,32,.04),0 10px 30px rgba(16,40,32,.07);
+  --shadow-sm:0 1px 2px rgba(16,40,32,.05),0 4px 12px rgba(16,40,32,.05);
+  --c-peach:#ffd9c2; --c-lemon:#fff0b3; --c-sky:#cfe6ff; --c-lilac:#e6d9ff; --c-mint:#c9f2df; --c-pink:#ffd6e7; --c-sand:#efe4d6; --c-green:#c4eecb;
+  --on-pastel:#14201c;
+  --late:#e0445c; /* pita terlambat: merah pekat yang sama di kedua tema, teks putih */
+  --f-ui:"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0c100e; --surface:#141917; --surface-2:#1b211e; --line:#252d29; --line-strong:#334039;
-  --fg:#eef2ef; --muted:#9aa79f; --faint:#6b776f;
-  --accent:#4cc39d; --accent-ink:#06120d; --accent-soft:#16302a;
-  --warn:#f2b250; --warn-soft:#33270f; --danger:#f2879a; --danger-soft:#3a1c23; --ok:#7dd3a0; --ok-soft:#163023;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+  --bg:#0f1211; --surface:#181c1b; --surface-2:#202625; --line:#2a3230; --line-strong:#37413e;
+  --fg:#eef3f1; --muted:#9eaca7; --faint:#6b7873;
+  --accent:#34d3a6; --accent-ink:#06261d; --accent-soft:#143a30; --accent-strong:#5fe0bb;
+  --ink:#eef3f1; --ink-fg:#0f1211;
+  --warn:#f5b54a; --warn-soft:#3a2c10; --danger:#ff7b8f; --danger-soft:#3d1a21;
+  --ok:#4ade80; --ok-soft:#123222; --info:#7fa8ff; --info-soft:#16264a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3),0 4px 12px rgba(0,0,0,.25);
+  color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0c100e; --surface:#141917; --surface-2:#1b211e; --line:#252d29; --line-strong:#334039;
-  --fg:#eef2ef; --muted:#9aa79f; --faint:#6b776f;
-  --accent:#4cc39d; --accent-ink:#06120d; --accent-soft:#16302a;
-  --warn:#f2b250; --warn-soft:#33270f; --danger:#f2879a; --danger-soft:#3a1c23; --ok:#7dd3a0; --ok-soft:#163023;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
-/* Font: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap"> */
+  --bg:#0f1211; --surface:#181c1b; --surface-2:#202625; --line:#2a3230; --line-strong:#37413e;
+  --fg:#eef3f1; --muted:#9eaca7; --faint:#6b7873;
+  --accent:#34d3a6; --accent-ink:#06261d; --accent-soft:#143a30; --accent-strong:#5fe0bb;
+  --ink:#eef3f1; --ink-fg:#0f1211;
+  --warn:#f5b54a; --warn-soft:#3a2c10; --danger:#ff7b8f; --danger-soft:#3d1a21;
+  --ok:#4ade80; --ok-soft:#123222; --info:#7fa8ff; --info-soft:#16264a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3),0 4px 12px rgba(0,0,0,.25);
+  color-scheme:dark}
 
-/* Layout: layar dapur (tablet/TV landscape), dibaca dari 1–2 m, disentuh dengan jari berminyak. Tiga variasi di atas satu data. */
+/* ===== Dasar ===== */
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:16px calc(104px + env(safe-area-inset-bottom,0px));overflow-x:hidden}
-button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--radius-sm);padding:10px 16px;min-height:48px;transition:border-color .15s,background .15s}
-button:hover:not(:disabled){border-color:var(--fg)}
-button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-button:disabled{opacity:.4;cursor:not-allowed}
-button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-button.primary:hover:not(:disabled){border-color:var(--accent);filter:brightness(1.06)}
-button.quiet{background:transparent;border-color:var(--line)}
-.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+body{margin:0;background:radial-gradient(900px 420px at 0% -160px,color-mix(in srgb,var(--accent) 12%,transparent),transparent 70%),var(--bg);background-color:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:16px;line-height:1.4;overflow-x:hidden;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:var(--surface-2);border-radius:999px;padding:10px 18px;min-height:44px;font-weight:600;transition:transform .15s,background-color .15s,box-shadow .15s,filter .15s}
+button:hover:not(:disabled){filter:brightness(.97)}
+button:active:not(:disabled){transform:scale(.98)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 30%,transparent)}
+button.primary:hover:not(:disabled){filter:brightness(1.06)}
+button.ink{background:var(--ink);color:var(--ink-fg)}
+button.quiet{background:var(--surface-2)}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .muted{color:var(--muted)}
-.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.spread{display:flex;gap:12px;align-items:center;justify-content:space-between}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--faint);flex:none}
-.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.late{background:var(--danger)} .dot.acc{background:var(--accent)}
-.tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.tag.late{border-color:var(--danger);color:var(--danger)}
-.tag.warn{border-color:var(--warn);color:var(--warn)}
-.tag.alergi{background:var(--danger);border-color:var(--danger);color:var(--surface)}
-.tag.acc{border-color:var(--accent);color:var(--accent)}
-.empty{color:var(--faint);padding:24px 0;text-align:center}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.empty{color:var(--faint);padding:28px 8px;text-align:center;font-weight:500}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-/* Kepala layar */
-.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px}
-.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.brand b{font-size:22px;font-weight:700;letter-spacing:-.02em}
-.clock{font-size:22px}
-.stats{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
-.stat{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted)}
-.stat b{color:var(--fg);font-size:20px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chips button{border-radius:999px;padding:8px 18px;font-weight:500;border-color:var(--line)}
-.chips button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-.chips button .num{color:inherit;opacity:.6;margin-left:6px}
-.demo{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px dashed var(--line-strong);border-radius:var(--radius-sm);padding:4px 6px 4px 10px}
-.demo .label{font-size:11px;margin-right:4px}
-.demo button{min-height:34px;padding:4px 10px;font-size:13px;border-color:var(--line);background:transparent}
-.offline{display:flex;gap:16px;align-items:center;border:1px solid var(--danger);background:var(--danger-soft);color:var(--fg);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px}
-.offline b{color:var(--danger)}
-.is-offline main{opacity:.55}
+/* Pil status (ref3) */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;white-space:nowrap;line-height:1.2}
+.pill.antre{background:var(--info-soft);color:var(--info)}
+.pill.dimasak{background:var(--warn-soft);color:var(--warn)}
+.pill.siap{background:var(--ok-soft);color:var(--ok)}
+.pill.late{background:var(--late);color:#fff}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.alergi{background:var(--late);color:#fff}
+.pill.batal{background:var(--danger-soft);color:var(--danger);text-decoration:line-through}
+.pill.recall{background:var(--c-lilac);color:var(--on-pastel)}
+.pill.ghost{background:var(--surface-2);color:var(--muted)}
 
-/* Item pesanan (dipakai semua variasi) */
-.item{display:grid;grid-template-columns:28px 1fr auto;gap:2px 12px;align-items:start;width:100%;text-align:left;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;padding:12px 4px;min-height:56px}
-.item:first-child{border-top:0}
-.item:hover:not(:disabled){background:var(--surface-2)}
-.item .nm{font-size:18px;font-weight:600;line-height:1.3}
-.item .nm .q{font-family:var(--f-num);font-variant-numeric:tabular-nums;margin-right:6px}
-.item .st{font-size:13px;color:var(--faint);padding-top:4px}
-.item .sub{grid-column:2/4;font-size:15px;color:var(--muted)}
-.item .note{grid-column:2/4;font-size:15px;color:var(--fg);border-left:2px solid var(--warn);padding-left:10px;margin-top:4px}
-.item .alg{grid-column:1/4;margin-top:8px;background:var(--danger-soft);border:1px solid var(--danger);border-left-width:6px;border-radius:8px;padding:8px 12px;color:var(--danger);font-weight:700;font-size:16px;letter-spacing:.04em;text-transform:uppercase}
-.mark{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-strong);margin-top:2px;display:grid;place-items:center;font-size:13px;font-weight:700}
-.mark.dimasak{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 4px var(--surface)}
-.mark.siap{border-color:var(--ok);background:var(--ok);color:var(--surface)}
-.item.siap .nm{color:var(--muted);font-weight:500}
-.item.batal{cursor:default}
-.item.batal .nm{text-decoration:line-through;color:var(--faint);font-weight:500}
-.item.batal .mark{border-style:dashed}
+/* Lencana kanal */
+.ch{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:5px 12px 5px 8px;border-radius:999px;color:var(--on-pastel);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ch.dine{background:var(--c-lilac)} .ch.take{background:var(--c-lemon)}
+.ch.gofood{background:var(--c-mint)} .ch.grabfood{background:var(--c-green)} .ch.shopeefood{background:var(--c-peach)}
+.kode{font-size:14px;font-weight:600;color:var(--muted)}
 
-/* Tiket */
-.ticket{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative}
-.ticket::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--line)}
-.ticket.warn::before{background:var(--warn)}
-.ticket.late{border-color:var(--danger)}
-.ticket.late::before{background:var(--danger);height:4px}
-.t-head{padding:18px 18px 12px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
-.t-no{font-family:var(--f-num);font-size:28px;font-weight:500;letter-spacing:-.03em;line-height:1}
-.t-kanal{font-size:16px;font-weight:600}
-.t-kode{font-family:var(--f-num);font-size:16px;color:var(--fg)}
-.t-time{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:24px;text-align:right;line-height:1}
-.t-time.warn{color:var(--warn)} .t-time.late{color:var(--danger)}
-.t-meta{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.t-driver{margin:0 18px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--warn);border-radius:var(--radius-sm);padding:8px 12px;font-size:15px;font-weight:600;color:var(--warn)}
-.t-items{padding:0 14px;flex:1}
-.t-foot{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:14px 18px 18px}
-.t-foot button{min-height:56px;font-size:17px}
+/* Pastel per stasiun */
+.p-sand{--p:var(--c-sand)} .p-pink{--p:var(--c-pink)} .p-mint{--p:var(--c-mint)} .p-sky{--p:var(--c-sky)} .p-lilac{--p:var(--c-lilac)} .p-lemon{--p:var(--c-lemon)} .p-peach{--p:var(--c-peach)}
 
-/* Variasi A: tiket per pesanan */
-.va{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
-.recent{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.recent button{min-height:48px;border-color:var(--line);background:transparent}
+/* ===== Kerangka: rel ikon + isi ===== */
+.shell{display:grid;grid-template-columns:84px minmax(0,1fr);gap:16px;padding:16px 16px calc(104px + env(safe-area-inset-bottom,0px))}
+.rail{position:sticky;top:16px;height:calc(100vh - 32px);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0}
+.logo{width:48px;height:48px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:20px;margin-bottom:14px;box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
+.rail .nav{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;color:var(--muted)}
+.rail .nav.on{background:var(--accent-soft);color:var(--accent-strong)}
+.rail .nav svg.i{width:22px;height:22px}
+.rail .sp{flex:1}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--c-peach);color:var(--on-pastel);display:grid;place-items:center;font-weight:800;font-size:15px}
+#app{min-width:0}
 
-/* Variasi B: per item per stasiun */
-.vb{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
-.stn{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;min-width:0}
-.stn h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
-.stn h3{margin:18px 0 6px}
-.agg{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;padding:14px 4px}
-.agg:hover:not(:disabled){background:var(--surface-2)}
-.agg .line1{display:flex;align-items:baseline;gap:12px}
-.agg .big{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:26px;line-height:1;min-width:2.2ch}
-.agg .nm{font-size:18px;font-weight:600;flex:1}
-.agg .sub{margin:4px 0 0 calc(2.2ch * 1.2 + 12px);color:var(--muted);font-size:15px}
-.agg .note{margin:6px 0 0 calc(2.2ch * 1.2 + 12px);border-left:2px solid var(--warn);padding-left:10px;font-size:15px}
-.agg .alg{margin:8px 0 0;background:var(--danger-soft);border:1px solid var(--danger);border-left-width:6px;border-radius:8px;padding:8px 12px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.agg.dimasak .big{color:var(--accent)}
-.orders{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0 calc(2.2ch * 1.2 + 12px)}
-.ochip{min-height:40px;padding:4px 10px;border-radius:999px;font-size:14px;display:inline-flex;gap:8px;align-items:center;border-color:var(--line);background:var(--surface)}
-.ochip .num{font-size:14px}
-.ochip.late{border-color:var(--danger);color:var(--danger)}
-.ochip.warn{border-color:var(--warn);color:var(--warn)}
-.handoff{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
-.handoff .list{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-.handoff button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:160px;text-align:left;padding:12px 16px}
-.handoff button b{font-family:var(--f-num);font-size:22px;font-weight:500}
+/* Bilah atas */
+.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hello h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.hello p{margin:2px 0 0;color:var(--muted);font-size:14px;font-weight:500}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.clock{font-size:30px;font-weight:800;letter-spacing:-.02em;background:var(--surface);border-radius:999px;padding:6px 20px;box-shadow:var(--shadow-sm);line-height:1.2}
+.net{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font-weight:700;font-size:14px}
+.net.off{background:var(--late);color:#fff}
+.net i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px color-mix(in srgb,currentColor 25%,transparent)}
+.recallbtn{background:var(--surface);box-shadow:var(--shadow-sm);display:inline-flex;gap:8px;align-items:center;position:relative;padding-right:14px}
+.badge{min-width:24px;height:24px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:13px;font-weight:800;display:inline-grid;place-items:center;padding:0 6px}
 
-/* Variasi C: lajur status */
-.strip{border:1px solid var(--warn);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;background:var(--surface)}
-.strip .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:12px}
-.ojol{display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;padding:12px 14px;border-color:var(--line)}
-.ojol .kode{font-family:var(--f-num);font-size:24px;line-height:1.1}
-.ojol .w{font-family:var(--f-num);font-size:20px;color:var(--warn);text-align:right}
-.ojol .bar{grid-column:1/3;height:4px;border-radius:2px;background:var(--surface-2);margin-top:8px;overflow:hidden}
-.ojol .bar i{display:block;height:100%;background:var(--ok)}
-.vc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
-.lane{min-width:0}
-.lane-h{display:flex;align-items:center;gap:10px;padding:0 4px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
-.lane-h b{font-size:18px}
-.lane-h .num{color:var(--muted);font-size:16px}
+/* KPI (ref1) */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;display:grid;grid-template-columns:44px 1fr;gap:2px 14px;align-items:center;min-width:0}
+.kpi .ico{grid-row:1/3;width:44px;height:44px;border-radius:50%;display:grid;place-items:center}
+.kpi .k{font-size:14px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v{font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.kpi .v small{font-size:16px;font-weight:700;color:var(--muted);margin-left:2px}
+.kpi .d{grid-column:1/3;font-size:13px;font-weight:600;margin-top:8px}
+.kpi .d.ok{color:var(--ok)} .kpi .d.bad{color:var(--danger)} .kpi .d.warn{color:var(--warn)} .kpi .d.mut{color:var(--muted)}
+.ico.acc{background:var(--accent-soft);color:var(--accent-strong)}
+.ico.dan{background:var(--danger-soft);color:var(--danger)}
+.ico.wrn{background:var(--warn-soft);color:var(--warn)}
+.ico.inf{background:var(--info-soft);color:var(--info)}
+.kpi.alarm{background:var(--late);color:#fff}
+.kpi.alarm .k,.kpi.alarm .d{color:#fff}
+.kpi.alarm .ico{background:rgba(255,255,255,.22);color:#fff}
+
+/* Petak stasiun + demo */
+.stations{display:flex;gap:10px;overflow-x:auto;padding:4px;margin:-4px -4px 14px;scrollbar-width:none;min-width:0}
+.subbar{display:flex;gap:10px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.subbar h2{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.stations::-webkit-scrollbar{display:none}
+.tile{flex:1 0 132px;background:var(--p);color:var(--on-pastel);border-radius:16px;padding:12px 16px 12px 12px;display:grid;grid-template-columns:auto 1fr;gap:0 10px;align-items:center;text-align:left;min-height:64px;box-shadow:inset 0 0 0 2px transparent}
+.tile .e{grid-row:1/3;font-size:26px;line-height:1;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.55);display:grid;place-items:center}
+.tile b{font-size:16px;font-weight:800}
+.tile small{font-size:13px;font-weight:600;opacity:.7}
+.tile[aria-pressed="true"]{box-shadow:inset 0 0 0 3px var(--on-pastel),0 6px 16px rgba(16,40,32,.12)}
+.tile.all{--p:var(--surface);color:var(--fg);box-shadow:var(--shadow-sm)}
+.tile.all .e{background:var(--accent-soft)}
+.tile.all[aria-pressed="true"]{--p:var(--ink);color:var(--ink-fg);box-shadow:0 6px 16px rgba(16,40,32,.16)}
+.tile.all[aria-pressed="true"] .e{background:color-mix(in srgb,var(--ink-fg) 18%,transparent)}
+.demo{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1.5px dashed var(--line-strong);border-radius:20px;padding:6px 6px 6px 14px;}
+.demo .label{font-size:11px;margin-right:2px}
+.demo button{min-height:40px;padding:6px 14px;font-size:13px;background:var(--surface);box-shadow:var(--shadow-sm)}
+
+/* Banner offline */
+.offline{display:flex;gap:16px;align-items:center;background:var(--danger-soft);color:var(--fg);border-radius:var(--radius);padding:14px 18px;margin-bottom:18px;box-shadow:inset 0 0 0 2px var(--danger)}
+.offline .ico{width:44px;height:44px;border-radius:50%;background:var(--late);color:#fff;display:grid;place-items:center;flex:none}
+.offline b{color:var(--danger);display:block;font-size:17px}
+.is-offline main{opacity:.55;filter:saturate(.6)}
+
+/* ===== Baris item (tiket) ===== */
+.item{display:grid;grid-template-columns:48px minmax(0,1fr) 34px;gap:2px 12px;align-items:center;width:100%;text-align:left;border-radius:var(--radius-md);background:transparent;padding:8px;min-height:64px;font-weight:400}
+.item+.item{margin-top:2px}
+.item:hover:not(:disabled){background:var(--surface-2);filter:none}
+.thumb{grid-row:1/3;width:48px;height:48px;border-radius:14px;background:var(--p);display:grid;place-items:center;font-size:26px;line-height:1;align-self:start}
+.item .nm{font-size:19px;font-weight:700;line-height:1.25;letter-spacing:-.01em;min-width:0}
+.item .nm .q{font-weight:800;font-size:22px;margin-right:6px;color:var(--accent-strong)}
+.item .st{font-size:13px;color:var(--muted);font-weight:600;grid-column:2}
+.item .mark{grid-column:3;grid-row:1/3}
+.item .sub{grid-column:2/4;font-size:15px;color:var(--muted);font-weight:500}
+.item .note,.agg .note{grid-column:1/4;font-size:15px;font-weight:600;color:var(--on-pastel);background:var(--c-lemon);border-radius:10px;padding:6px 12px;margin-top:6px}
+.item .alg,.agg .alg{grid-column:1/4;margin-top:6px;background:var(--late);border-radius:12px;padding:10px 14px;color:#fff;font-weight:800;font-size:17px;letter-spacing:.04em;text-transform:uppercase;display:flex;gap:8px;align-items:center;box-shadow:0 6px 16px color-mix(in srgb,var(--late) 30%,transparent)}
+.mark{width:32px;height:32px;border-radius:50%;box-shadow:inset 0 0 0 2.5px var(--line-strong);display:grid;place-items:center;font-size:15px;font-weight:800;color:#fff}
+.mark.dimasak{background:var(--warn-soft);box-shadow:inset 0 0 0 2.5px var(--warn)}
+.mark.dimasak::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--warn)}
+.mark.siap{background:var(--ok);box-shadow:none}
+.mark.siap svg.i{width:18px;height:18px;stroke-width:3}
+.item.siap .nm{color:var(--muted)}
+.item.siap .thumb{opacity:.6}
+.item.batal{cursor:default;opacity:1}
+.item.batal .nm{text-decoration:line-through;text-decoration-thickness:2px;color:var(--faint);font-weight:600}
+.item.batal .nm .q{color:var(--faint)}
+.item.batal .thumb{filter:grayscale(1);opacity:.45}
+.item.batal .mark{box-shadow:inset 0 0 0 2px var(--line-strong);opacity:.5}
+
+/* ===== Tiket (ref3) ===== */
+.ticket{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative}
+.t-head{padding:16px 18px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:center;border-bottom:1px solid var(--line)}
+.t-id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.t-no{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.t-time{font-size:30px;font-weight:800;text-align:right;line-height:1;letter-spacing:-.02em;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.t-time svg.i{width:22px;height:22px;color:var(--faint)}
+.t-time.warn{color:var(--warn)} .t-time.warn svg.i{color:var(--warn)}
+.t-meta{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ticket.warn{box-shadow:inset 0 0 0 2px var(--warn),var(--shadow)}
+.ticket.warn .t-head{background:var(--warn-soft)}
+.ticket.warn .t-head .pill.warn{background:var(--warn);color:var(--surface)}
+.ticket.warn .t-head .pill:not(.warn):not(.alergi){background:var(--surface)}
+.ticket.late{box-shadow:inset 0 0 0 3px var(--late),0 10px 30px color-mix(in srgb,var(--late) 25%,transparent)}
+.ticket.late .t-head{background:var(--late);color:#fff;border-bottom:0}
+.ticket.late .t-time,.ticket.late .t-time svg.i{color:#fff}
+.ticket.late .t-head .kode{color:rgba(255,255,255,.85)}
+.ticket.late .t-head .pill.late{background:#fff;color:var(--late)}
+.ticket.late .t-head .pill.alergi{background:#7a0f22}
+.ticket.late .t-head .pill:not(.late):not(.alergi){background:rgba(255,255,255,.92);color:#14201c}
+.t-driver{margin:12px 14px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--radius-md);padding:10px 14px;font-size:15px;font-weight:700}
+.t-driver .num{font-size:20px;font-weight:800}
+.t-items{padding:10px 8px;flex:1}
+.t-foot{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:6px 14px 14px}
+.t-foot button{min-height:56px;font-size:17px;font-weight:700}
+
+/* ===== Variasi A: tiket per pesanan ===== */
+.va{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;align-items:start}
+.recent{margin-top:24px}
+.recent .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.recent .hd h2{margin:0;font-size:18px;font-weight:800}
+.olines{display:flex;gap:12px;overflow-x:auto;padding:4px 4px 10px;margin:-4px;scrollbar-width:thin}
+.oline{flex:0 0 220px;background:var(--surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:14px;display:grid;grid-template-columns:1fr auto;gap:6px 8px;text-align:left;font-weight:400;align-items:center}
+.oline b{font-size:20px;font-weight:800}
+.oline .m{font-size:13px;color:var(--muted);font-weight:500;text-align:right}
+.oline .ch{justify-self:start;font-size:13px}
+.oline .go{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:14px;font-weight:700;color:var(--accent-strong)}
+
+/* ===== Variasi B: per item per stasiun ===== */
+.vb{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;align-items:start}
+.stn{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);min-width:0;overflow:hidden}
+.stn-h{background:var(--p);color:var(--on-pastel);padding:16px 18px;display:flex;align-items:center;gap:12px}
+.stn-h .e{font-size:30px;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.6);display:grid;place-items:center;flex:none}
+.stn-h h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;flex:1}
+.stn-h .cnt{font-size:14px;font-weight:700;background:rgba(255,255,255,.7);padding:6px 12px;border-radius:999px;white-space:nowrap}
+.stn-b{padding:10px 12px 14px}
+.stn-b .grp{display:flex;align-items:center;gap:8px;margin:10px 6px 6px}
+.agg-wrap{background:var(--surface-2);border-radius:var(--radius-md);padding:6px;margin-top:8px;border-left:5px solid var(--p)}
+.agg{display:grid;grid-template-columns:64px minmax(0,1fr) 34px;gap:2px 12px;align-items:center;width:100%;text-align:left;border-radius:12px;background:transparent;padding:6px;font-weight:400}
+.agg:hover:not(:disabled){background:var(--surface);filter:none}
+.agg .big{grid-row:1/3;width:64px;height:64px;border-radius:16px;background:var(--surface);display:grid;place-items:center;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1;box-shadow:var(--shadow-sm)}
+.agg.dimasak .big{background:var(--warn-soft);color:var(--warn);box-shadow:inset 0 0 0 2px var(--warn)}
+.agg .nm{font-size:19px;font-weight:700;line-height:1.25}
+.agg .nm .e{margin-right:6px}
+.agg .mark{grid-column:3;grid-row:1/3}
+.agg .sub{grid-column:2/4;color:var(--muted);font-size:15px;font-weight:500}
+.agg .note{margin-top:4px}
+.orders{display:flex;gap:6px;flex-wrap:wrap;padding:6px 6px 4px}
+.ochip{min-height:40px;padding:4px 12px;font-size:14px;display:inline-flex;gap:8px;align-items:center;background:var(--surface);box-shadow:var(--shadow-sm);font-weight:600}
+.ochip b{font-weight:800}
+.ochip.warn{background:var(--warn-soft);color:var(--warn)}
+.ochip.late{background:var(--late);color:#fff}
+.ochip .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.ochip .dot.on{background:var(--warn)}
+.ochip.late .dot{background:#fff}
+.handoff{margin-top:20px;background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:18px}
+.handoff .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.handoff .hd h2{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px}
+.handoff .list{display:flex;gap:12px;overflow-x:auto;padding:12px 4px 4px;margin:0 -4px}
+.hcard{flex:0 0 230px;display:grid;grid-template-columns:1fr auto;gap:6px 8px;text-align:left;padding:14px;border-radius:var(--radius-md);background:var(--ok-soft);font-weight:400;align-items:center}
+.hcard b{font-size:24px;font-weight:800}
+.hcard .ch{justify-self:start;font-size:13px}
+.hcard .go{grid-column:1/3;font-size:14px;font-weight:700;color:var(--ok)}
+
+/* ===== Variasi C: lajur status ===== */
+.strip{margin-bottom:18px}
+.strip .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.strip .hd h2{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px}
+.strip .list{display:flex;gap:12px;overflow-x:auto;padding:4px;margin:-4px}
+.ojol{flex:0 0 260px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;text-align:left;padding:14px 16px;border-radius:var(--radius);background:var(--p);color:var(--on-pastel);font-weight:400;align-items:center}
+.ojol .who{font-size:13px;font-weight:700;opacity:.75}
+.ojol .kd{font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.ojol .w{font-size:24px;font-weight:800;text-align:right;display:flex;gap:6px;align-items:center}
+.ojol .s{font-size:13px;font-weight:600;opacity:.8}
+.ojol .bar{grid-column:1/3;height:8px;border-radius:999px;background:rgba(255,255,255,.65);margin-top:6px;overflow:hidden}
+.ojol .bar i{display:block;height:100%;background:#14201c;border-radius:999px}
+.ojol .tt{font-size:14px;font-weight:700;text-align:right}
+.ojol .tt.late{background:var(--late);color:#fff;border-radius:999px;padding:2px 8px}
+.vc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.lane{min-width:0;border-radius:26px;padding:12px;background:var(--lane)}
+.lane.baru{--lane:var(--info-soft);--lc:var(--info)}
+.lane.dimasak{--lane:var(--warn-soft);--lc:var(--warn)}
+.lane.siap{--lane:var(--ok-soft);--lc:var(--ok)}
+.lane-h{display:flex;align-items:center;gap:10px;padding:6px 6px 12px}
+.lane-h .ln{display:inline-flex;align-items:center;gap:8px;background:var(--lc);color:var(--surface);font-weight:800;font-size:15px;padding:8px 14px;border-radius:999px}
+.lane-h .n{margin-left:auto;font-size:22px;font-weight:800;color:var(--lc)}
 .lane .cards{display:flex;flex-direction:column;gap:12px}
-.card .t-head{padding:16px 16px 8px}
-.card .t-no{font-size:24px}
-.card .t-time{font-size:20px}
-.card .t-items{padding:0 12px}
-.card .item{padding:10px 4px;min-height:48px}
-.card .item .nm{font-size:16px}
-.card .t-foot{grid-template-columns:1fr;padding:12px 16px 16px}
+.lane .empty{background:color-mix(in srgb,var(--surface) 60%,transparent);border-radius:var(--radius-md)}
+.card .t-head{padding:14px 16px 12px}
+.card .t-no{font-size:26px}
+.card .t-time{font-size:24px}
+.card .t-items{padding:6px}
+.card .item{min-height:52px;padding:6px 8px;grid-template-columns:40px minmax(0,1fr) 30px}
+.card .thumb{width:40px;height:40px;font-size:22px;border-radius:12px}
+.card .item .nm{font-size:17px}
+.card .item .nm .q{font-size:19px}
+.card .mark{width:28px;height:28px}
+.card .t-foot{grid-template-columns:1fr;padding:4px 12px 12px}
+.card .t-foot button{min-height:52px}
 
-/* Laci recall */
-.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--fg) 30%,transparent);z-index:70}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:71;display:flex;flex-direction:column;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
-.drawer h2{margin:0;font-size:20px}
-.drawer .list{overflow:auto;margin-top:16px;display:flex;flex-direction:column}
-.rc{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;border-top:1px solid var(--line);padding:14px 2px}
-.rc b{font-family:var(--f-num);font-size:22px;font-weight:500}
-.rc .s{font-size:14px;color:var(--muted)}
+/* ===== Laci recall ===== */
+.scrim{position:fixed;inset:0;background:rgba(10,20,16,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:70}
+.drawer{position:fixed;top:12px;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));background:var(--surface);border-radius:24px;box-shadow:0 20px 60px rgba(10,20,16,.25);z-index:71;display:flex;flex-direction:column;padding:22px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.drawer .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.drawer h2{margin:0;font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px}
+.drawer .list{overflow:auto;margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.rc{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;background:var(--surface-2);border-radius:var(--radius-md);padding:12px 12px 12px 16px}
+.rc b{font-size:24px;font-weight:800}
+.rc button{white-space:nowrap}
+.rc .s{font-size:13px;color:var(--muted);font-weight:500;display:block;margin-top:4px}
 
 /* Toast */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 8px 8px 18px;border-radius:var(--radius-sm);z-index:80;max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center;font-weight:500}
-.toast button{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent);min-height:40px;padding:6px 14px}
-.toast:not(:has(button)){padding-right:18px;min-height:56px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--ink-fg);padding:8px 8px 8px 20px;border-radius:999px;z-index:80;max-width:calc(100% - 32px);display:flex;gap:12px;align-items:center;font-weight:600;box-shadow:0 12px 30px rgba(10,20,16,.25)}
+.toast button{background:var(--accent);color:var(--accent-ink);min-height:40px;padding:6px 16px}
+.toast:not(:has(button)){padding-right:20px;min-height:56px}
 
-/* Bilah pemilih variasi (bagian prototipe, bukan desain) */
-.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:999px;display:flex;align-items:center;gap:2px;padding:4px;box-shadow:var(--shadow);z-index:60;max-width:calc(100% - 32px)}
-.switcher button{background:transparent;border:0;color:var(--bg);font-weight:600;min-height:44px;min-width:44px;padding:0 12px;border-radius:999px;font-size:20px;line-height:1}
-.switcher button:hover{background:color-mix(in srgb,var(--bg) 15%,transparent)}
-.switcher button:focus-visible{outline-color:var(--bg)}
-.switcher span{font-weight:600;font-size:14px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Pemilih variasi (bagian prototipe) */
+.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--ink-fg);border-radius:999px;display:flex;align-items:center;gap:2px;padding:4px;box-shadow:0 10px 30px rgba(10,20,16,.25);z-index:60;max-width:calc(100% - 32px)}
+.switcher button{background:transparent;color:var(--ink-fg);min-height:44px;min-width:44px;padding:0 12px;font-size:22px;line-height:1}
+.switcher button:hover{background:color-mix(in srgb,var(--ink-fg) 15%,transparent)}
+.switcher button:focus-visible{outline-color:var(--accent)}
+.switcher span{font-weight:700;font-size:14px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-@media (max-width:900px){.vc{grid-template-columns:1fr}}
+@media (max-width:1100px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vc{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vc .lane.siap{grid-column:1/3}
+}
+@media (max-width:767px){
+  .shell{grid-template-columns:minmax(0,1fr);padding:16px 16px calc(104px + env(safe-area-inset-bottom,0px))}
+  .rail{display:none}
+  .vc{grid-template-columns:minmax(0,1fr)}
+  .vc .lane.siap{grid-column:auto}
+}
 @media (max-width:520px){
   .va,.vb{grid-template-columns:minmax(0,1fr)}
-  .t-no{font-size:24px}
-  .stats{gap:14px}
-  .offline{flex-direction:column;align-items:flex-start}
+  .hello h1{font-size:22px}
+  .clock{font-size:22px;padding:6px 14px}
+  .top{gap:12px}
+  .tools{width:100%}
+  .tools .clock{margin-right:auto}
+  .kpis{gap:10px}
+  .kpi{padding:12px 14px;grid-template-columns:32px 1fr;gap:6px 8px}
+  .kpi .ico{grid-row:auto;width:32px;height:32px}
+  .kpi .ico svg.i{width:17px;height:17px}
+  .kpi .k{font-size:13px;white-space:normal;line-height:1.2}
+  .kpi .v{grid-column:1/3;font-size:28px}
+  .kpi .d{font-size:12px;margin-top:0}
+  .tools{gap:8px}
+  .net{padding:0 14px}
+  .net .nt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tile{flex:0 0 auto}
+  .subbar{margin-bottom:12px}
+  .demo{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;border-radius:999px;padding:5px 5px 5px 14px}
+  .demo::-webkit-scrollbar{display:none}
+  .demo button{flex:none}
+  .t-no{font-size:26px}
+  .t-time{font-size:26px}
+  .offline{flex-direction:row;align-items:flex-start}
+  .lane{padding:10px;border-radius:22px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-/* Palet berwarna terinspirasi aplikasi modern minimalis: Toast POS (oranye hangat), Wise (hijau limau), Stripe (indigo-cyan). "polos" = token asli. */
-:root[data-palette="hangat"]{--bg:#fbf7f3;--surface:#ffffff;--surface-2:#f5ede6;--line:#ece1d7;--line-strong:#dccbbd;--fg:#1f1410;--muted:#6f5d52;--faint:#a8968a;--accent:#e5480b;--accent-ink:#ffffff;--accent-soft:#ffe7dc;--accent-2:#ffb020}
-:root[data-palette="limau"]{--bg:#f3f6ef;--surface:#ffffff;--surface-2:#e9efe2;--line:#dde6d3;--line-strong:#c4d3b5;--fg:#163300;--muted:#55693f;--faint:#94a684;--accent:#1f4a00;--accent-ink:#c7f59e;--accent-soft:#dcf7c4;--accent-2:#9fe870}
-:root[data-palette="indigo"]{--bg:#f6f9fc;--surface:#ffffff;--surface-2:#eef2f8;--line:#e3e8ef;--line-strong:#cfd7e3;--fg:#0a2540;--muted:#425466;--faint:#8898aa;--accent:#635bff;--accent-ink:#ffffff;--accent-soft:#ecebff;--accent-2:#00d4ff}
-@media (prefers-color-scheme: dark){
-:root[data-palette="hangat"]:not([data-theme="light"]){--bg:#16100c;--surface:#1f1712;--surface-2:#2a1f18;--line:#36291f;--line-strong:#4a382b;--fg:#fbefe7;--muted:#c4ab9b;--faint:#866f61;--accent:#ff7a45;--accent-ink:#1a0a03;--accent-soft:#43200f;--accent-2:#ffc054}
-:root[data-palette="limau"]:not([data-theme="light"]){--bg:#0e1a07;--surface:#15240c;--surface-2:#1c2f11;--line:#263d18;--line-strong:#345221;--fg:#ecf7e2;--muted:#a9c194;--faint:#6f8a5d;--accent:#9fe870;--accent-ink:#163300;--accent-soft:#24410f;--accent-2:#9fe870}
-:root[data-palette="indigo"]:not([data-theme="light"]){--bg:#0a1628;--surface:#0f1f36;--surface-2:#152844;--line:#1e3352;--line-strong:#2b4467;--fg:#f0f4fa;--muted:#a3b3c7;--faint:#6b7f99;--accent:#8f88ff;--accent-ink:#0a0a2a;--accent-soft:#24245a;--accent-2:#4fe0ff}}
-:root[data-palette="hangat"][data-theme="dark"]{--bg:#16100c;--surface:#1f1712;--surface-2:#2a1f18;--line:#36291f;--line-strong:#4a382b;--fg:#fbefe7;--muted:#c4ab9b;--faint:#866f61;--accent:#ff7a45;--accent-ink:#1a0a03;--accent-soft:#43200f;--accent-2:#ffc054}
-:root[data-palette="limau"][data-theme="dark"]{--bg:#0e1a07;--surface:#15240c;--surface-2:#1c2f11;--line:#263d18;--line-strong:#345221;--fg:#ecf7e2;--muted:#a9c194;--faint:#6f8a5d;--accent:#9fe870;--accent-ink:#163300;--accent-soft:#24410f;--accent-2:#9fe870}
-:root[data-palette="indigo"][data-theme="dark"]{--bg:#0a1628;--surface:#0f1f36;--surface-2:#152844;--line:#1e3352;--line-strong:#2b4467;--fg:#f0f4fa;--muted:#a3b3c7;--faint:#6b7f99;--accent:#8f88ff;--accent-ink:#0a0a2a;--accent-soft:#24245a;--accent-2:#4fe0ff}
-/* Sentuhan warna: cahaya lembut di atas halaman, kepala halaman bergradasi, tombol utama bergradasi */
-:root:not([data-palette="polos"]) body{background:radial-gradient(900px 360px at 10% -120px,color-mix(in srgb,var(--accent) 14%,transparent),transparent 70%),radial-gradient(700px 300px at 95% -100px,color-mix(in srgb,var(--accent-2) 16%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
-:root:not([data-palette="polos"]) :is(.top,.topbar,.hd){background:linear-gradient(120deg,var(--accent-soft),color-mix(in srgb,var(--accent-2) 20%,var(--surface)));border:0;border-radius:var(--radius);padding:14px 18px}
-:root:not([data-palette="polos"]) :is(button.primary,.btn.primary){background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 72%,var(--accent-2)));border-color:transparent;box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 28%,transparent)}
-[hidden]{display:none!important}
-.palet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:6px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow)}
-.palet.atas{bottom:auto;left:auto;right:max(12px,calc(50% - 203px));transform:none;top:calc(var(--top) + 8px)}
-.palet button{width:22px;height:22px;min-height:0;min-width:0;padding:0;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line-strong);cursor:pointer}
-.palet button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--fg)}
 </style>
 
-<div id="app"></div>
+<div class="shell">
+  <aside class="rail" aria-label="Navigasi (dekoratif)">
+    <div class="logo" aria-hidden="true">L</div>
+    <span class="nav on" title="Layar dapur"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+    <span class="nav" title="Pesanan"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span>
+    <span class="nav" title="Riwayat"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
+    <span class="nav" title="Laporan"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span>
+    <span class="nav" title="Pengaturan"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg></span>
+    <span class="sp"></span>
+    <span class="avatar" title="Chef Rina · Kepala dapur" aria-hidden="true">RA</span>
+  </aside>
+  <div id="app"></div>
+</div>
 <div id="layer"></div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <nav class="switcher" aria-label="Pilih variasi prototipe">
@@ -222,25 +368,28 @@ button.quiet{background:transparent;border-color:var(--line)}
 <script>
 /* ===== Logika bersama (in-memory, prototipe) ===== */
 const STATIONS = ["Wajan","Bakar","Kuah","Dingin","Bar"];
+const ST_LOOK = { Wajan:["sand","🍳"], Bakar:["pink","🍗"], Kuah:["mint","🍲"], Dingin:["sky","🧊"], Bar:["sky","🧋"] };
 const TARGET_MIN = 15, WARN_MIN = 10;          // Target Waktu Saji Outlet (default 15 menit)
 const OJOL = ["GoFood","GrabFood","ShopeeFood"];
 const MENU = [
-  {name:"Nasi Goreng Kampung", st:"Wajan", var:["Tidak pedas","Pedas","Extra pedas"], add:["Telur ceplok","Kerupuk"]},
-  {name:"Mie Goreng Jawa", st:"Wajan", var:["Tidak pedas","Pedas"]},
-  {name:"Tahu Cabe Garam", st:"Wajan"},
-  {name:"Pisang Goreng Keju", st:"Wajan"},
-  {name:"Kentang Goreng", st:"Wajan"},
-  {name:"Ayam Bakar Madu", st:"Bakar", add:["Nasi putih","Sambal matah"]},
-  {name:"Sate Ayam", st:"Bakar", var:["Bumbu kecap","Bumbu kacang"]},
-  {name:"Sop Buntut", st:"Kuah"},
-  {name:"Soto Ayam", st:"Kuah", add:["Perkedel"]},
-  {name:"Gado-gado", st:"Dingin"},
-  {name:"Asinan Bogor", st:"Dingin"},
-  {name:"Es Teh", st:"Bar", var:["Manis","Tawar","Less sugar"]},
-  {name:"Es Jeruk", st:"Bar"},
-  {name:"Es Kopi Susu", st:"Bar", var:["Normal","Less sugar"]},
+  {name:"Nasi Goreng Kampung", st:"Wajan", e:"🍛", var:["Tidak pedas","Pedas","Extra pedas"], add:["Telur ceplok","Kerupuk"]},
+  {name:"Mie Goreng Jawa", st:"Wajan", e:"🍜", var:["Tidak pedas","Pedas"]},
+  {name:"Tahu Cabe Garam", st:"Wajan", e:"🌶️"},
+  {name:"Pisang Goreng Keju", st:"Wajan", e:"🍌"},
+  {name:"Kentang Goreng", st:"Wajan", e:"🍟"},
+  {name:"Ayam Bakar Madu", st:"Bakar", e:"🍗", add:["Nasi putih","Sambal matah"]},
+  {name:"Sate Ayam", st:"Bakar", e:"🍢", var:["Bumbu kecap","Bumbu kacang"]},
+  {name:"Sop Buntut", st:"Kuah", e:"🍲"},
+  {name:"Soto Ayam", st:"Kuah", e:"🍲", add:["Perkedel"]},
+  {name:"Gado-gado", st:"Dingin", e:"🥗"},
+  {name:"Asinan Bogor", st:"Dingin", e:"🥒"},
+  {name:"Es Teh", st:"Bar", e:"🧋", var:["Manis","Tawar","Less sugar"]},
+  {name:"Es Jeruk", st:"Bar", e:"🍊"},
+  {name:"Es Kopi Susu", st:"Bar", e:"☕", var:["Normal","Less sugar"]},
 ];
 const stOf = n => MENU.find(m=>m.name===n).st;
+const emo = n => (MENU.find(m=>m.name===n)||{}).e || "🍽️";
+const pc = st => "p-" + ST_LOOK[st][0];
 
 const T0 = Date.now();
 const S = {
@@ -307,7 +456,7 @@ const active = () => S.orders.filter(o=>!o.bumpedAt).sort((a,b)=>a.created-b.cre
 const recent = () => S.orders.filter(o=>o.bumpedAt).sort((a,b)=>b.bumpedAt-a.bumpedAt).slice(0,8);
 const inSt = (i, st) => st==="Semua" || i.st===st;
 const hasAlergi = o => live(o).some(i=>i.alergi);
-const kanalLabel = o => o.kanal==="Dine-in" ? "Meja " + o.meja : o.kanal==="Takeaway" ? "Takeaway" + (o.nama ? " · " + o.nama : "") : o.kanal;
+const kanalLabel = o => o.kanal==="Dine-in" ? "Meja " + o.meja : o.kanal==="Takeaway" ? "Bawa pulang" + (o.nama ? " · " + o.nama : "") : o.kanal;
 
 function snapshot(o){ S.undo = { oid:o.id, snap: JSON.stringify(o) }; }
 function undo(){ if(!S.undo) return null; const o = O(S.undo.oid); Object.assign(o, JSON.parse(S.undo.snap)); S.undo = null; return o; }
@@ -336,29 +485,60 @@ function addRandomOrder(){
 }
 function counts(){
   const a = active();
-  return { aktif:a.length, telat:a.filter(o=>level(o)==="late").length, driver:a.filter(o=>o.driverAt).length };
+  return { aktif:a.length, telat:a.filter(o=>level(o)==="late").length, driver:a.filter(o=>o.driverAt).length,
+    antre:a.reduce((n,o)=>n+live(o).filter(i=>i.status!=="siap").length,0) };
 }
+/* Rata-rata saji: dari masuk sampai ditandai selesai, untuk pesanan yang sudah selesai */
+function avgServe(){ const d = S.orders.filter(o=>o.bumpedAt); if(!d.length) return null; return d.reduce((n,o)=>n+(o.bumpedAt-o.created),0)/d.length; }
 
 /* ===== Tampilan bersama ===== */
 const fmt = ms => { const s = Math.max(0, Math.floor(ms/1000)), m = Math.floor(s/60), r = s%60; return m + ":" + String(r).padStart(2,"0"); };
 const clock = () => new Date(now()).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"}).replace(/\./g,":");
 const dis = () => S.online ? "" : "disabled";
 
+const ICONS = {
+  layers:'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  bike:'<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
+  timer:'<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
+  history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  wifioff:'<path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/>',
+  bag:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+};
+const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+const CH = { "Dine-in":["dine","🍽️"], "Takeaway":["take","🛍️"], "GoFood":["gofood","🛵"], "GrabFood":["grabfood","🛵"], "ShopeeFood":["shopeefood","🧡"] };
+const chBadge = o => `<span class="ch ${CH[o.kanal][0]}"><span aria-hidden="true">${CH[o.kanal][1]}</span>${kanalLabel(o)}</span>`;
+const STATE_PILL = { baru:["antre","Antre"], dimasak:["dimasak","Dimasak"], siap:["siap","Siap"] };
+const statePill = o => { const [c,t] = STATE_PILL[orderState(o)]; return `<span class="pill ${c}">${t}</span>`; };
+
 function header(){
-  const c = counts();
+  const c = counts(), avg = avgServe();
   const stCount = st => active().reduce((n,o)=>n + live(o).filter(i=>i.st===st && i.status!=="siap").length, 0);
+  const avgMin = avg==null ? null : avg/60000;
+  const tile = st => st==="Semua"
+    ? `<button class="tile all" data-act="st" data-st="Semua" data-key="st-Semua" aria-pressed="${S.st==="Semua"}"><span class="e" aria-hidden="true">🍽️</span><b>Semua</b><small><span class="num">${c.antre}</span> item</small></button>`
+    : `<button class="tile ${pc(st)}" data-act="st" data-st="${st}" data-key="st-${st}" aria-pressed="${S.st===st}"><span class="e" aria-hidden="true">${ST_LOOK[st][1]}</span><b>${st}</b><small><span class="num">${stCount(st)}</span> antre</small></button>`;
   return `<header class="top">
-    <div class="brand"><b>Dapur</b><span class="muted">Lifestore Kemang</span><span class="clock num" data-clock>${clock()}</span></div>
-    <div class="stats">
-      <span class="stat"><span class="dot ${S.online?"ok":"late"}"></span>${S.online?"Online":"Offline"}</span>
-      <span class="stat"><b class="num">${c.aktif}</b> aktif</span>
-      <span class="stat"><span class="dot ${c.telat?"late":""}"></span><b class="num">${c.telat}</b> terlambat</span>
-      <span class="stat"><span class="dot ${c.driver?"warn":""}"></span><b class="num">${c.driver}</b> driver menunggu</span>
-      <button class="quiet" data-act="drawer" data-key="drawer" aria-haspopup="dialog">Recall <span class="num muted">${recent().length}</span></button>
+    <div class="hello"><h1>Dapur Kemang 👨‍🍳</h1><p>Selamat siang, Chef Rina · target saji ${TARGET_MIN} menit</p></div>
+    <div class="tools">
+      <span class="clock num" data-clock>${clock()}</span>
+      <span class="net ${S.online?"":"off"}"><i></i><span class="nt">${S.online?"Online":"Offline"}</span></span>
+      <button class="recallbtn" data-act="drawer" data-key="drawer" aria-haspopup="dialog">${ic("history")}Recall <span class="badge num">${recent().length}</span></button>
     </div>
-    <nav class="chips" aria-label="Filter stasiun">
-      ${["Semua",...STATIONS].map(st=>`<button data-act="st" data-st="${st}" data-key="st-${st}" aria-pressed="${S.st===st}">${st}${st!=="Semua"?`<span class="num">${stCount(st)}</span>`:""}</button>`).join("")}
-    </nav>
+  </header>
+  <section class="kpis" aria-label="Ringkasan dapur">
+    <div class="kpi"><span class="ico acc">${ic("layers")}</span><span class="k">Pesanan aktif</span><span class="v num">${c.aktif}</span><span class="d mut"><span class="num">${c.antre}</span> item belum siap</span></div>
+    <div class="kpi ${c.telat?"alarm":""}"><span class="ico dan">${ic("alert")}</span><span class="k">Terlambat</span><span class="v num">${c.telat}</span><span class="d ${c.telat?"bad":"ok"}">${c.telat?`Lewat ${TARGET_MIN} menit, dahulukan`:"✓ Semua tepat waktu"}</span></div>
+    <div class="kpi"><span class="ico wrn">${ic("bike")}</span><span class="k">Driver menunggu</span><span class="v num">${c.driver}</span><span class="d ${c.driver?"warn":"mut"}">${c.driver?"Ojol sudah di depan":"Tidak ada yang menunggu"}</span></div>
+    <div class="kpi"><span class="ico inf">${ic("timer")}</span><span class="k">Rata-rata saji</span><span class="v num">${avgMin==null?"–":Math.round(avgMin)}<small>mnt</small></span><span class="d ${avgMin==null?"mut":avgMin<=TARGET_MIN?"ok":"bad"}">${avgMin==null?"Belum ada data":avgMin<=TARGET_MIN?`↓ di bawah target ${TARGET_MIN} mnt`:`↑ ${Math.round(avgMin-TARGET_MIN)} mnt di atas target`}</span></div>
+  </section>
+  <nav class="stations" aria-label="Filter stasiun">${["Semua",...STATIONS].map(tile).join("")}</nav>
+  ${S.online ? "" : `<div class="offline" role="alert"><span class="ico">${ic("wifioff")}</span><span><b>Koneksi internet terputus.</b><span>Layar dapur tidak menerima pesanan baru. Gunakan tiket printer sampai koneksi pulih.</span></span></div>`}
+  <div class="subbar">
+    <h2>${VARIANTS[vi][3]}${S.st==="Semua"?"":` · ${S.st}`}</h2>
     <div class="demo" aria-label="Kontrol demo">
       <span class="label">Demo</span>
       <button data-act="rand" data-key="d-rand">+ Pesanan acak</button>
@@ -366,44 +546,43 @@ function header(){
       <button data-act="ff" data-key="d-ff">+5 menit</button>
       <button data-act="net" data-key="d-net">${S.online?"Putus koneksi":"Sambung lagi"}</button>
     </div>
-  </header>
-  ${S.online ? "" : `<div class="offline" role="alert"><b>Koneksi internet terputus.</b><span>Layar dapur tidak menerima pesanan baru. Gunakan tiket printer sampai koneksi pulih.</span></div>`}`;
+  </div>`;
 }
 
 function itemRow(o, i){
   const sub = [i.varian, ...i.addons.map(a=>"+ " + a)].filter(Boolean).join(" · ");
   const lbl = i.batal ? "Dibatalkan" : i.status==="baru" ? "Baru" : i.status==="dimasak" ? "Dimasak" : "Siap";
-  return `<button class="item ${i.status} ${i.batal?"batal":""}" ${i.batal?"disabled aria-disabled=\"true\"":dis()} data-act="item" data-o="${o.id}" data-i="${i.id}" data-key="it-${i.id}" aria-label="${i.qty} ${i.name}, ${lbl}. Ketuk untuk ubah status">
-    <span class="mark ${i.batal?"":i.status}">${i.status==="siap"&&!i.batal?"✓":""}</span>
-    <span class="nm"><span class="q">${i.qty}×</span>${i.name}</span>
-    <span class="st">${i.batal?"Dibatalkan":i.st}</span>
-    ${sub?`<span class="sub">${sub}</span>`:""}
-    ${i.catatan?`<span class="note">${i.catatan}</span>`:""}
-    ${i.alergi?`<span class="alg">Alergi ${i.alergi}</span>`:""}
+  return `<button class="item ${i.status} ${i.batal?"batal":""} ${pc(i.st)}" ${i.batal?"disabled aria-disabled=\"true\"":dis()} data-act="item" data-o="${o.id}" data-i="${i.id}" data-key="it-${i.id}" aria-label="${i.qty} ${i.name}, ${lbl}. Ketuk untuk ubah status">
+    <span class="thumb" aria-hidden="true">${emo(i.name)}</span>
+    <span class="nm"><span class="q num">${i.qty}×</span>${i.name}</span>
+    <span class="mark ${i.batal?"":i.status}">${i.status==="siap"&&!i.batal?ic("check"):""}</span>
+    <span class="st">${i.batal?`<span class="pill batal">Batal</span>`:i.st}${sub?` · <span style="font-weight:500">${sub}</span>`:""}</span>
+    ${i.catatan?`<span class="note">📝 ${i.catatan}</span>`:""}
+    ${i.alergi?`<span class="alg">⚠️ Alergi ${i.alergi}</span>`:""}
   </button>`;
 }
 
 function ticketHead(o){
   const lv = level(o);
   return `<div class="t-head">
-    <div><div class="t-no">#${o.no}</div></div>
-    <div class="t-time ${lv}" data-since="${o.created}">${fmt(elapsed(o))}</div>
+    <div class="t-id"><span class="t-no num">#${o.no}</span>${chBadge(o)}</div>
+    <div class="t-time num ${lv}">${ic("timer")}<span data-since="${o.created}">${fmt(elapsed(o))}</span></div>
     <div class="t-meta">
-      <span class="t-kanal">${kanalLabel(o)}</span>${o.kode?`<span class="t-kode">${o.kode}</span>`:""}
-    </div>
-    <div class="t-meta">
-      ${lv==="late"?`<span class="tag late"><span class="dot late"></span>Terlambat</span>`:lv==="warn"?`<span class="tag warn"><span class="dot warn"></span>Mendekati ${TARGET_MIN} mnt</span>`:""}
-      ${hasAlergi(o)?`<span class="tag alergi">Alergi</span>`:""}
-      ${o.recalled?`<span class="tag acc">Dibuka lagi</span>`:""}
+      ${lv==="late"?`<span class="pill late">Terlambat</span>`:lv==="warn"?`<span class="pill warn">Mendekati ${TARGET_MIN} mnt</span>`:""}
+      ${statePill(o)}
+      ${hasAlergi(o)?`<span class="pill alergi">⚠️ Alergi</span>`:""}
+      ${o.recalled?`<span class="pill recall">Dibuka lagi</span>`:""}
+      ${o.kode?`<span class="kode num">${o.kode}</span>`:""}
     </div>
   </div>
-  ${o.driverAt?`<div class="t-driver"><span>Driver menunggu</span><span class="num" data-since="${o.driverAt}">${fmt(now()-o.driverAt)}</span></div>`:""}`;
+  ${o.driverAt?`<div class="t-driver"><span>🛵 Driver menunggu</span><span class="num" data-since="${o.driverAt}">${fmt(now()-o.driverAt)}</span></div>`:""}`;
 }
 
 /* ===== Variasi A: tiket per pesanan ===== */
 function VariantA(){
   const list = active().filter(o=>live(o).some(i=>inSt(i,S.st)) || S.st==="Semua");
   const stLbl = S.st==="Semua" ? "" : " " + S.st;
+  const rec = recent().slice(0,5);
   return `<div class="va">${list.map(o=>{
     const its = o.items.filter(i=>inSt(i,S.st));
     const anyBaru = its.some(i=>!i.batal && i.status==="baru");
@@ -412,10 +591,16 @@ function VariantA(){
       <div class="t-items">${its.map(i=>itemRow(o,i)).join("")}</div>
       <div class="t-foot">
         <button class="quiet" data-act="start" data-o="${o.id}" data-key="s-${o.id}" ${anyBaru?dis():"disabled"}>Mulai${stLbl}</button>
-        <button class="primary" data-act="ready" data-o="${o.id}" data-key="r-${o.id}" ${dis()}>Siap${stLbl}</button>
+        <button class="primary" data-act="ready" data-o="${o.id}" data-key="r-${o.id}" ${dis()}>✓ Siap${stLbl}</button>
       </div>
     </article>`;}).join("") || `<p class="empty">Tidak ada pesanan untuk stasiun ini.</p>`}</div>
-  <div class="recent"><span class="label">Baru selesai</span>${recent().slice(0,5).map(o=>`<button data-act="recall" data-o="${o.id}" data-key="rc-${o.id}" ${dis()}><span class="num">#${o.no}</span> <span class="muted">${kanalLabel(o)}</span></button>`).join("") || `<span class="muted">Belum ada</span>`}</div>`;
+  <section class="recent" aria-label="Baru selesai">
+    <div class="hd"><h2>Baru selesai</h2><span class="muted" style="font-size:14px;font-weight:500">Ketuk untuk buka lagi</span></div>
+    <div class="olines">${rec.map(o=>`<button class="oline" data-act="recall" data-o="${o.id}" data-key="rc-${o.id}" ${dis()}>
+      <b class="num">#${o.no}</b><span class="m"><span class="num">${live(o).length}</span> item<br><span class="num" data-since="${o.bumpedAt}">${fmt(now()-o.bumpedAt)}</span> lalu</span>
+      ${chBadge(o)}<span class="pill siap">Selesai</span>
+      <span class="go">Buka lagi ${ic("history")}</span></button>`).join("") || `<span class="muted">Belum ada</span>`}</div>
+  </section>`;
 }
 
 /* ===== Variasi B: per item, dikelompokkan per stasiun ===== */
@@ -433,13 +618,15 @@ function aggRow(g, gi, st){
   const refs = g.refs.map(r=>r.o.id+":"+r.i.id).join(",");
   return `<div class="agg-wrap">
     <button class="agg ${g.status}" data-act="grp" data-refs="${refs}" data-key="g-${st}-${g.status}-${gi}" ${dis()} aria-label="${g.qty} ${g.name}, ${g.status}. Ketuk untuk ${g.status==="baru"?"mulai masak":"tandai siap"}">
-      <span class="line1"><span class="big">${g.qty}</span><span class="nm">${g.name}</span><span class="mark ${g.status}"></span></span>
-      ${sub?`<span class="sub" style="display:block">${sub}</span>`:""}
-      ${g.catatan?`<span class="note" style="display:block">${g.catatan}</span>`:""}
-      ${g.alergi?`<span class="alg" style="display:block">Alergi ${g.alergi}</span>`:""}
+      <span class="big num">${g.qty}</span>
+      <span class="nm"><span class="e" aria-hidden="true">${emo(g.name)}</span>${g.name}</span>
+      <span class="mark ${g.status}"></span>
+      ${sub?`<span class="sub">${sub}</span>`:""}
+      ${g.catatan?`<span class="note">📝 ${g.catatan}</span>`:""}
+      ${g.alergi?`<span class="alg">⚠️ Alergi ${g.alergi}</span>`:""}
     </button>
     <div class="orders">${g.refs.map(r=>`<button class="ochip ${level(r.o)}" data-act="item" data-o="${r.o.id}" data-i="${r.i.id}" data-key="oc-${r.i.id}" ${dis()} aria-label="Pesanan ${r.o.no}, ${r.i.qty} porsi">
-      <span class="num">#${r.o.no}</span><span>${r.i.qty}×</span><span class="num" data-since="${r.o.created}">${fmt(elapsed(r.o))}</span>${isOjol(r.o)?`<span class="dot ${r.o.driverAt?"warn":""}" title="Ojol"></span>`:""}</button>`).join("")}</div>
+      <b class="num">#${r.o.no}</b><span>${r.i.qty}×</span><span class="num" data-since="${r.o.created}">${fmt(elapsed(r.o))}</span>${isOjol(r.o)?`<span class="dot ${r.o.driverAt?"on":""}" title="Ojol"></span>`:""}</button>`).join("")}</div>
   </div>`;
 }
 function VariantB(){
@@ -448,21 +635,23 @@ function VariantB(){
   return `<div class="vb">${sts.map(st=>{
     const gs = groups(st), baru = gs.filter(g=>g.status==="baru"), mas = gs.filter(g=>g.status==="dimasak");
     const tot = gs.reduce((n,g)=>n+g.qty,0);
-    return `<section class="stn" aria-label="Stasiun ${st}">
-      <div class="spread"><h2>${st}</h2><span class="num muted">${tot} porsi</span></div>
-      ${!gs.length?`<p class="empty">Stasiun kosong</p>`:""}
-      ${mas.length?`<h3 class="label">Dimasak</h3>${mas.map((g,k)=>aggRow(g,k,st)).join("")}`:""}
-      ${baru.length?`<h3 class="label">Antre</h3>${baru.map((g,k)=>aggRow(g,k,st)).join("")}`:""}
+    return `<section class="stn ${pc(st)}" aria-label="Stasiun ${st}">
+      <div class="stn-h"><span class="e" aria-hidden="true">${ST_LOOK[st][1]}</span><h2>${st}</h2><span class="cnt"><span class="num">${tot}</span> porsi</span></div>
+      <div class="stn-b">
+      ${!gs.length?`<p class="empty">✨ Stasiun kosong</p>`:""}
+      ${mas.length?`<h3 class="grp"><span class="pill dimasak">Dimasak</span></h3>${mas.map((g,k)=>aggRow(g,k,st)).join("")}`:""}
+      ${baru.length?`<h3 class="grp"><span class="pill antre">Antre</span></h3>${baru.map((g,k)=>aggRow(g,k,st)).join("")}`:""}
+      </div>
     </section>`;}).join("")}</div>
   <section class="handoff" aria-label="Siap diserahkan">
-    <div class="spread"><span class="label">Siap diserahkan · semua item selesai</span><span class="num muted">${ready.length}</span></div>
-    <div class="list">${ready.map(o=>`<button data-act="bump" data-o="${o.id}" data-key="b-${o.id}" ${dis()}><b>#${o.no}</b><span>${kanalLabel(o)}${o.kode?" · "+o.kode:""}</span><span class="muted" style="font-size:14px">Ketuk saat diserahkan</span></button>`).join("") || `<span class="muted">Belum ada pesanan yang lengkap.</span>`}</div>
+    <div class="hd"><h2>Siap diserahkan <span class="pill siap"><span class="num">${ready.length}</span></span></h2><span class="muted" style="font-size:14px;font-weight:500">Semua item selesai</span></div>
+    <div class="list">${ready.map(o=>`<button class="hcard" data-act="bump" data-o="${o.id}" data-key="b-${o.id}" ${dis()}><b class="num">#${o.no}</b><span class="pill siap">Siap</span>${chBadge(o)}<span class="kode num">${o.kode||""}</span><span class="go">Ketuk saat diserahkan →</span></button>`).join("") || `<span class="muted" style="padding:8px 4px">Belum ada pesanan yang lengkap.</span>`}</div>
   </section>`;
 }
 
 /* ===== Variasi C: lajur status (kanban) ===== */
 function card(o, lane){
-  const action = lane==="baru" ? ["start","Mulai masak","quiet"] : lane==="dimasak" ? ["ready","Semua siap","primary"] : ["bump", isOjol(o)?"Diambil driver":o.kanal==="Dine-in"?"Diantar ke meja":"Diambil", "primary"];
+  const action = lane==="baru" ? ["start","Mulai masak","ink"] : lane==="dimasak" ? ["ready","✓ Semua siap","primary"] : ["bump", isOjol(o)?"Diambil driver":o.kanal==="Dine-in"?"Diantar ke meja":"Diambil", "primary"];
   return `<article class="ticket card ${level(o)}" aria-label="Pesanan ${o.no}">
     ${ticketHead(o)}
     <div class="t-items">${o.items.map(i=>itemRow(o,i)).join("")}</div>
@@ -472,15 +661,16 @@ function card(o, lane){
 function VariantC(){
   const a = active().filter(o=>live(o).some(i=>inSt(i,S.st)) || S.st==="Semua");
   const waiting = active().filter(o=>isOjol(o) && o.driverAt).sort((x,y)=>x.driverAt-y.driverAt);
-  const lane = (key,title) => { const l = a.filter(o=>orderState(o)===key); return `<section class="lane" aria-label="${title}">
-    <div class="lane-h"><span class="dot ${key==="dimasak"?"acc":key==="siap"?"ok":""}"></span><b>${title}</b><span class="num">${l.length}</span></div>
+  const OJ_P = { GoFood:"p-mint", GrabFood:"p-mint", ShopeeFood:"p-peach" };
+  const lane = (key,title) => { const l = a.filter(o=>orderState(o)===key); return `<section class="lane ${key}" aria-label="${title}">
+    <div class="lane-h"><span class="ln">${title}</span><span class="n num">${l.length}</span></div>
     <div class="cards">${l.map(o=>card(o,key)).join("") || `<p class="empty">Kosong</p>`}</div></section>`; };
   return `${waiting.length?`<section class="strip" aria-label="Ojol menunggu driver">
-    <div class="spread"><span class="label" style="color:var(--warn)">Ojol · driver sudah menunggu</span><span class="muted" style="font-size:14px">Dahulukan pesanan ini</span></div>
-    <div class="list">${waiting.map(o=>{ const l = live(o), done = l.filter(i=>i.status==="siap").length; return `<button class="ojol" data-act="focus" data-o="${o.id}" data-key="oj-${o.id}">
-      <span><span class="muted" style="font-size:14px">${o.kanal} · #${o.no}</span><br><span class="kode">${o.kode}</span></span>
-      <span class="w" data-since="${o.driverAt}">${fmt(now()-o.driverAt)}</span>
-      <span class="muted" style="font-size:14px">${done}/${l.length} item siap</span><span class="t-time ${level(o)}" style="font-size:15px" data-since="${o.created}">${fmt(elapsed(o))}</span>
+    <div class="hd"><h2>🛵 Driver sudah menunggu <span class="pill dimasak"><span class="num">${waiting.length}</span></span></h2><span class="muted" style="font-size:14px;font-weight:500">Dahulukan pesanan ini</span></div>
+    <div class="list">${waiting.map(o=>{ const l = live(o), done = l.filter(i=>i.status==="siap").length; return `<button class="ojol ${OJ_P[o.kanal]}" data-act="focus" data-o="${o.id}" data-key="oj-${o.id}">
+      <span><span class="who">${o.kanal} · #${o.no}</span><br><span class="kd num">${o.kode}</span></span>
+      <span class="w num">${ic("bike")}<span data-since="${o.driverAt}">${fmt(now()-o.driverAt)}</span></span>
+      <span class="s"><span class="num">${done}/${l.length}</span> item siap</span><span class="tt num ${level(o)}" data-since="${o.created}">${fmt(elapsed(o))}</span>
       <span class="bar"><i style="width:${Math.round(done/l.length*100)}%"></i></span></button>`;}).join("")}</div>
   </section>`:""}
   <div class="vc">${lane("baru","Baru")}${lane("dimasak","Dimasak")}${lane("siap","Siap · menunggu diambil")}</div>`;
@@ -490,10 +680,10 @@ function drawer(){
   if(!S.drawer) return "";
   return `<div class="scrim" data-act="close"></div>
   <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dh">
-    <div class="spread"><h2 id="dh">Recall pesanan</h2><button class="quiet" data-act="close" data-key="close" id="dclose">Tutup</button></div>
-    <p class="muted" style="margin:8px 0 0">Pesanan yang baru ditandai selesai. Ketuk “Buka lagi” untuk mengembalikannya ke layar.</p>
-    <div class="list">${recent().map(o=>`<div class="rc"><b>#${o.no}</b><span>${kanalLabel(o)}${o.kode?" · "+o.kode:""}<br><span class="s">Selesai ${fmt(now()-o.bumpedAt)} lalu · ${live(o).length} item</span></span>
-      <button data-act="recall" data-o="${o.id}" data-key="rc-${o.id}" ${dis()}>Buka lagi</button></div>`).join("") || `<p class="empty">Belum ada pesanan selesai.</p>`}</div>
+    <div class="hd"><h2 id="dh">${ic("history")}Recall pesanan</h2><button class="quiet" data-act="close" data-key="close" id="dclose">Tutup</button></div>
+    <p class="muted" style="margin:8px 0 0;font-weight:500">Pesanan yang baru ditandai selesai. Ketuk “Buka lagi” untuk mengembalikannya ke layar.</p>
+    <div class="list">${recent().map(o=>`<div class="rc"><b class="num">#${o.no}</b><span>${chBadge(o)}<span class="s">${o.kode?o.kode+" · ":""}Selesai ${fmt(now()-o.bumpedAt)} lalu · ${live(o).length} item</span></span>
+      <button class="ink" data-act="recall" data-o="${o.id}" data-key="rc-${o.id}" ${dis()}>Buka lagi</button></div>`).join("") || `<p class="empty">Belum ada pesanan selesai.</p>`}</div>
   </aside>`;
 }
 
@@ -505,7 +695,7 @@ function toast(msg, withUndo){
 }
 
 /* ===== Pemilih variasi (bagian prototipe) ===== */
-const VARIANTS = [["A","Tiket per pesanan",VariantA],["B","Per item per stasiun",VariantB],["C","Lajur status",VariantC]];
+const VARIANTS = [["A","Tiket per pesanan",VariantA,"Tiket aktif"],["B","Per item per stasiun",VariantB,"Antrean per stasiun"],["C","Lajur status",VariantC,"Alur pesanan"]];
 let vi = Math.max(0, VARIANTS.findIndex(v=>"#"+v[0]===location.hash));
 let sig = "";
 function signature(){ return active().map(o=>o.id+level(o)).join(",") + S.online; }
@@ -513,7 +703,7 @@ function render(){
   const [k,name,fn] = VARIANTS[vi];
   const fk = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.key;
   document.body.classList.toggle("is-offline", !S.online);
-  document.getElementById("app").innerHTML = header() + `<main>${fn()}</main>`;
+  document.getElementById("app").innerHTML = header() + `<main class="view-${k.toLowerCase()}">${fn()}</main>`;
   document.getElementById("layer").innerHTML = drawer();
   document.getElementById("vlabel").textContent = `${k} · ${name}`;
   sig = signature();
@@ -553,12 +743,4 @@ setInterval(() => {
   const c = document.querySelector("[data-clock]"); if(c) c.textContent = clock();
 }, 1000);
 render();
-(function(){/* Pemilih palet warna (prototipe) */
-  const P=[["hangat","Oranye hangat (ala Toast POS)","linear-gradient(135deg,#e5480b,#ffb020)"],["limau","Hijau limau (ala Wise)","linear-gradient(135deg,#163300,#9fe870)"],["indigo","Indigo cyan (ala Stripe)","linear-gradient(135deg,#635bff,#00d4ff)"],["polos","Polos (versi sebelumnya)","linear-gradient(135deg,#127a5f,#e3f2ec)"]];
-  let cur="hangat";try{const s=localStorage.getItem("lifestore-palet");if(P.some(p=>p[0]===s))cur=s}catch(e){}
-  const nav=document.createElement("div");nav.className="palet";nav.setAttribute("role","group");nav.setAttribute("aria-label","Pilih palet warna");
-  const set=k=>{cur=k;document.documentElement.dataset.palette=k;try{localStorage.setItem("lifestore-palet",k)}catch(e){}nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===k)))};
-  P.forEach(([k,t,g])=>{const b=document.createElement("button");b.type="button";b.dataset.p=k;b.title=t;b.setAttribute("aria-label",t);b.style.background=g;b.addEventListener("click",()=>set(k));nav.appendChild(b)});
-  if(document.querySelector(".topstrip"))nav.classList.add("atas");document.body.appendChild(nav);set(cur);
-})();
 </script>
