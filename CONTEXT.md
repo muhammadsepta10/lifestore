@@ -457,3 +457,21 @@ _Avoid_: Profit per menu, laba menu
 **Laporan Terjadwal**:
 Ringkasan harian, mingguan atau bulanan yang dikirim otomatis lewat email ke penerima yang dipilih, dengan lampiran Excel untuk mingguan dan bulanan.
 _Avoid_: Auto report, laporan otomatis
+
+## Onboarding
+
+**Siap Jualan**:
+Checklist setup di dashboard untuk Tenant baru: profil Outlet, Profil Pajak, Menu, Metode Bayar, Meja dan QR, karyawan dan PIN, Perangkat Terdaftar, dan printer. Setiap langkah boleh dilewati. Kasir bisa dipakai setelah ada Menu, Profil Pajak, dan satu perangkat.
+_Avoid_: Wizard, setup awal, onboarding checklist
+
+**Template Impor**:
+Berkas Excel resmi untuk memasukkan Menu (dengan Varian dan Grup Pilihan), Bahan, Resep, stok awal, dan Supplier. Sebelum disimpan ada pratinjau dan daftar error per baris. Template bisa diimpor ulang untuk memperbarui data dan juga dipakai untuk pindah dari POS lain.
+_Avoid_: Upload massal, migrasi data, CSV import
+
+**Data Contoh**:
+Menu, Meja, dan transaksi contoh di Outlet demo yang bisa dipilih saat daftar. Data ini bisa dihapus sekali klik dan tidak masuk laporan keuangan maupun penagihan.
+_Avoid_: Data dummy, demo data, sandbox
+
+**Bantuan Setup**:
+Layanan Admin Platform untuk menyiapkan data Tenant atas permintaan pemilik. Admin memakai izin sementara dari pemilik, dan setiap aksinya tercatat di Log Audit. Gratis di Paket Langganan Bisnis.
+_Avoid_: Onboarding manual, setup service
