@@ -1,0 +1,21 @@
+{
+  "name": "@lifestore/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Token desain v3 Lifestore (warna, radius, bayangan, pastel Kategori).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  }
+}
