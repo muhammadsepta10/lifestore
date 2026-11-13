@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794553647681,
+      "tag": "0000_peran_aplikasi",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794553713494,
+      "tag": "0001_tenant_merek",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794553714302,
+      "tag": "0002_rls_tenant_merek",
+      "breakpoints": true
+    }
+  ]
+}
