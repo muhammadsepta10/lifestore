@@ -161,7 +161,7 @@ function bagiProporsional(nilai: number, bagian: number, keseluruhan: number): n
   return Math.floor((2 * nilai * bagian + keseluruhan) / (2 * keseluruhan));
 }
 
-function bulatkanTunai(total: number, aturan: AturanPembulatanTunai | null | undefined): number {
+export function bulatkanTunai(total: number, aturan: AturanPembulatanTunai | null | undefined): number {
   if (aturan == null || aturan.kelipatan <= 1) return total;
   const k = aturan.kelipatan;
   const bawah = Math.floor(total / k) * k;

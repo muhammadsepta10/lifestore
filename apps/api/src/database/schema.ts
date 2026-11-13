@@ -138,6 +138,11 @@ export const outlet = pgTable(
     kota: text().notNull(),
     jamBuka: jsonb().$type<JamBukaHari[]>(),
     logoUrl: text(),
+    /** Aturan Pembulatan Tunai Outlet; null = tunai tidak dibulatkan. */
+    pembulatanTunaiKelipatan: integer(),
+    pembulatanTunaiArah: text().$type<'bawah' | 'terdekat' | 'atas'>(),
+    /** Outlet bayar-dulu: Pesanan bawa pulang ditahan dari dapur sampai Tagihan lunas. */
+    bayarDulu: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.tenantId), index().on(t.merekId)],
@@ -591,7 +596,12 @@ export const tagihan = pgTable(
     /** Meja untuk Tagihan dine-in; null untuk bawa pulang. */
     mejaId: text().references(() => meja.id),
     namaPelanggan: text(),
-    status: text().$type<'terbuka' | 'lunas' | 'void'>().notNull().default('terbuka'),
+    /** `digabung` = isinya dipindahkan ke Tagihan lain saat gabung Meja (bukan penjualan, bukan void). */
+    status: text().$type<'terbuka' | 'lunas' | 'void' | 'digabung'>().notNull().default('terbuka'),
+    /** Tagihan asal bila Tagihan ini hasil Pisah Tagihan. */
+    asalTagihanId: text(),
+    /** Tagihan tujuan bila Tagihan ini digabung ke Tagihan lain. */
+    digabungKeTagihanId: text(),
     dibukaOlehAnggotaId: text()
       .notNull()
       .references(() => anggota.id),
@@ -613,9 +623,34 @@ export const tagihan = pgTable(
     dasarPajak: bigint({ mode: 'number' }),
     pajak: bigint({ mode: 'number' }),
     total: bigint({ mode: 'number' }),
+    /** Pembulatan Tunai Tagihan ini (bisa negatif); dicatat terpisah, tidak termasuk `total`. */
+    pembulatanTunai: bigint({ mode: 'number' }),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.tenantId), index().on(t.outletId, t.status), uniqueIndex().on(t.outletId, t.nomorNota)],
+);
+
+/**
+ * Meja yang ditempati Tagihan dine-in. Satu Tagihan bisa menempati lebih dari satu Meja (gabung
+ * Meja). Status Meja diturunkan dari sini: Terisi bila ada baris milik Tagihan yang masih terbuka.
+ */
+export const tagihanMeja = pgTable(
+  'tagihan_meja',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    tagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    mejaId: text()
+      .notNull()
+      .references(() => meja.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.mejaId), uniqueIndex().on(t.tagihanId, t.mejaId)],
 );
 
 /**
@@ -719,7 +754,8 @@ export const kejadianItemPesanan = pgTable(
     itemPesananId: text()
       .notNull()
       .references(() => itemPesanan.id),
-    status: text().$type<'menunggu' | 'dimasak' | 'siap' | 'disajikan' | 'batal'>().notNull(),
+    /** `ditahan` = belum masuk dapur (Outlet bayar-dulu, menunggu lunas). */
+    status: text().$type<'ditahan' | 'menunggu' | 'dimasak' | 'siap' | 'disajikan' | 'batal'>().notNull(),
     anggotaId: text().references(() => anggota.id),
     perangkatId: text().references(() => perangkatTerdaftar.id),
     alasan: text(),
@@ -753,6 +789,8 @@ export const pembayaran = pgTable(
     jumlah: bigint({ mode: 'number' }).notNull(),
     diterima: bigint({ mode: 'number' }).notNull(),
     kembalian: bigint({ mode: 'number' }).notNull(),
+    /** Bagian `jumlah` yang berasal dari Pembulatan Tunai (bisa negatif); bukan penjualan. */
+    pembulatan: bigint({ mode: 'number' }).notNull().default(0),
     referensi: text(),
     anggotaId: text()
       .notNull()

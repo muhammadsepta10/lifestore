@@ -1,7 +1,7 @@
 import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { Database, type TxDb } from '../database/database';
-import { meja, outlet } from '../database/schema';
+import { meja, outlet, tagihan, tagihanMeja } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { PerluIzin } from '../izin/izin';
 import { KaryawanModule } from '../karyawan/karyawan.module';
@@ -12,9 +12,35 @@ type BarisMeja = typeof meja.$inferSelect;
 
 const MAKS_MEJA_SEKALIGUS = 200;
 
-/** Status Meja diturunkan dari Tagihan terbuka; sebelum ada Tagihan (#38) semua Meja Kosong. */
-function tampilkanMeja(m: BarisMeja) {
-  return { id: m.id, outletId: m.outletId, label: m.label, kapasitas: m.kapasitas, aktif: m.aktif, status: 'kosong' as const };
+/**
+ * Status Meja tidak disimpan: Terisi bila ada Tagihan terbuka yang menempatinya, selain itu Kosong.
+ * `tagihanId` = Tagihan terbuka di Meja itu.
+ */
+function tampilkanMeja(m: BarisMeja, tagihanId: string | null) {
+  return {
+    id: m.id,
+    outletId: m.outletId,
+    label: m.label,
+    kapasitas: m.kapasitas,
+    aktif: m.aktif,
+    status: tagihanId ? ('terisi' as const) : ('kosong' as const),
+    tagihanId,
+  };
+}
+
+/** Tagihan terbuka per Meja di sebuah Outlet. */
+async function tagihanTerbukaPerMeja(tx: TxDb, outletId: string): Promise<Map<string, string>> {
+  const baris = await tx
+    .select({ mejaId: tagihanMeja.mejaId, tagihanId: tagihanMeja.tagihanId })
+    .from(tagihanMeja)
+    .innerJoin(tagihan, eq(tagihan.id, tagihanMeja.tagihanId))
+    .where(and(eq(tagihanMeja.outletId, outletId), eq(tagihan.status, 'terbuka')));
+  return new Map(baris.map((b) => [b.mejaId, b.tagihanId]));
+}
+
+async function tampilkanDenganStatus(tx: TxDb, outletId: string, baris: BarisMeja[]) {
+  const terisi = await tagihanTerbukaPerMeja(tx, outletId);
+  return baris.sort(urutLabel).map((m) => tampilkanMeja(m, terisi.get(m.id) ?? null));
 }
 
 /** Urutkan label angka secara numerik (2 sebelum 10), lalu label lain menurut abjad. */
@@ -26,7 +52,7 @@ function urutLabel(a: BarisMeja, b: BarisMeja): number {
 
 export async function daftarMeja(tx: TxDb, outletId: string) {
   const baris = await tx.select().from(meja).where(eq(meja.outletId, outletId)).orderBy(asc(meja.createdAt));
-  return baris.sort(urutLabel).map(tampilkanMeja);
+  return tampilkanDenganStatus(tx, outletId, baris);
 }
 
 /** Siap Jualan: Outlet punya minimal satu Meja aktif. */
@@ -46,7 +72,7 @@ async function ubahAktif(tx: TxDb, outletId: string, id: string, aktif: boolean)
     .where(and(eq(meja.id, id), eq(meja.outletId, outletId)))
     .returning();
   if (!m) throw tidakDitemukan('Meja');
-  return tampilkanMeja(m);
+  return (await tampilkanDenganStatus(tx, outletId, [m]))[0]!;
 }
 
 /** Kelola Meja dari dashboard. */
@@ -95,7 +121,7 @@ export class MejaController {
       .insert(meja)
       .values(label.map((l) => ({ tenantId: o.tenantId, outletId, label: l, kapasitas })))
       .returning();
-    return baru.sort(urutLabel).map(tampilkanMeja);
+    return tampilkanDenganStatus(tx, outletId, baru);
   }
 
   /** Ubah kapasitas atau aktifkan/nonaktifkan Meja. */
@@ -107,14 +133,14 @@ export class MejaController {
     if (m.kapasitas !== undefined) perubahan.kapasitas = angka(m, 'kapasitas', { min: 1, maks: 100 });
     if (m.aktif !== undefined) perubahan.aktif = boolean(m, 'aktif');
     if (Object.keys(perubahan).length === 0) throw tidakValid('body', 'Tidak ada yang diubah.');
-    const [baris] = await this.db
-      .tenant()
+    const tx = this.db.tenant();
+    const [baris] = await tx
       .update(meja)
       .set(perubahan)
       .where(and(eq(meja.id, id), eq(meja.outletId, outletId)))
       .returning();
     if (!baris) throw tidakDitemukan('Meja');
-    return tampilkanMeja(baris);
+    return (await tampilkanDenganStatus(tx, outletId, [baris]))[0]!;
   }
 
   private async pastikanOutlet(outletId: string) {

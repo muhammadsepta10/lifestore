@@ -1,8 +1,8 @@
 import { ConflictException } from '@nestjs/common';
 import { hitungTagihan, type Kanal, type RincianTagihan } from '@lifestore/domain';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { TxDb } from '../database/database';
-import { itemPesanan, kejadianItemPesanan, pembayaran, pesanan, tagihan } from '../database/schema';
+import { itemPesanan, kejadianItemPesanan, meja, pembayaran, pesanan, tagihan, tagihanMeja } from '../database/schema';
 import { type Masukan, teks, tidakDitemukan } from '../umum/validasi';
 
 /**
@@ -128,6 +128,8 @@ export function tampilkanPembayaran(p: BarisPembayaran) {
     jumlah: p.jumlah,
     diterima: p.diterima,
     kembalian: p.kembalian,
+    /** Bagian `jumlah` dari Pembulatan Tunai; `jumlah − pembulatan` yang melunasi Tagihan. */
+    pembulatan: p.pembulatan,
     referensi: p.referensi,
     dibayarPada: p.dibayarPada,
   };
@@ -135,7 +137,7 @@ export function tampilkanPembayaran(p: BarisPembayaran) {
 
 /** Angka Tagihan: dibekukan bila sudah ditutup, dihitung ulang dari itemnya bila masih terbuka. */
 function rincianBerlaku(t: BarisTagihan, item: readonly ItemBerstatus[]): Omit<RincianTagihan, 'pembulatanTunai' | 'totalDibayar'> {
-  if (t.status === 'lunas' && t.total !== null) {
+  if (t.status !== 'terbuka' && t.total !== null) {
     return {
       subtotal: t.subtotal ?? 0,
       diskon: t.diskon ?? 0,
@@ -149,15 +151,51 @@ function rincianBerlaku(t: BarisTagihan, item: readonly ItemBerstatus[]): Omit<R
   return { subtotal, diskon, serviceCharge, dasarPajak, pajak, total };
 }
 
-function ringkasTagihan(t: BarisTagihan, item: readonly ItemBerstatus[], bayar: readonly BarisPembayaran[]) {
+export interface MejaTagihan {
+  tagihanId: string;
+  id: string;
+  label: string;
+}
+
+/** Meja yang ditempati Tagihan-Tagihan ini; Meja utama (`tagihan.mejaId`) dulu, lalu urut gabung. */
+export async function mejaTagihan(tx: TxDb, tagihanIds: string[]): Promise<MejaTagihan[]> {
+  if (tagihanIds.length === 0) return [];
+  return tx
+    .select({ tagihanId: tagihanMeja.tagihanId, id: meja.id, label: meja.label })
+    .from(tagihanMeja)
+    .innerJoin(meja, eq(meja.id, tagihanMeja.mejaId))
+    .where(inArray(tagihanMeja.tagihanId, tagihanIds))
+    .orderBy(asc(tagihanMeja.createdAt), asc(meja.label));
+}
+
+/** Nilai Pembayaran yang melunasi Tagihan: tanpa kembalian dan tanpa Pembulatan Tunai. */
+export function nilaiMelunasi(p: Pick<BarisPembayaran, 'jumlah' | 'pembulatan'>): number {
+  return p.jumlah - p.pembulatan;
+}
+
+/** Pesanan yang itemnya (masih) ada di Tagihan ini, termasuk Pesanan asal item hasil Pisah Tagihan atau gabung Meja. */
+async function pesananTagihan(tx: TxDb, tagihanIds: string[], item: readonly ItemBerstatus[]) {
+  const dariItem = [...new Set(item.map((i) => i.pesananId))];
+  return tx
+    .select()
+    .from(pesanan)
+    .where(dariItem.length > 0 ? or(inArray(pesanan.tagihanId, tagihanIds), inArray(pesanan.id, dariItem)) : inArray(pesanan.tagihanId, tagihanIds))
+    .orderBy(asc(pesanan.createdAt), asc(pesanan.nomorPesanan));
+}
+
+function ringkasTagihan(t: BarisTagihan, item: readonly ItemBerstatus[], bayar: readonly BarisPembayaran[], mejanya: readonly MejaTagihan[]) {
   const rincian = rincianBerlaku(t, item);
-  const dibayar = bayar.reduce((s, p) => s + p.jumlah, 0);
+  const dibayar = bayar.reduce((s, p) => s + nilaiMelunasi(p), 0);
   return {
     id: t.id,
     outletId: t.outletId,
     status: t.status,
     kanal: t.kanal,
     mejaId: t.mejaId,
+    /** Semua Meja yang ditempati (lebih dari satu setelah gabung Meja). */
+    meja: mejanya.map((m) => ({ id: m.id, label: m.label })),
+    asalTagihanId: t.asalTagihanId,
+    digabungKeTagihanId: t.digabungKeTagihanId,
     namaPelanggan: t.namaPelanggan,
     dibukaPada: t.dibukaPada,
     ditutupPada: t.ditutupPada,
@@ -169,17 +207,19 @@ function ringkasTagihan(t: BarisTagihan, item: readonly ItemBerstatus[], bayar: 
     total: rincian.total,
     dibayar,
     sisa: Math.max(rincian.total - dibayar, 0),
+    /** Pembulatan Tunai tercatat terpisah; tidak termasuk `total` maupun `dibayar`. */
+    pembulatanTunai: bayar.reduce((s, p) => s + p.pembulatan, 0),
   };
 }
 
 /** Tagihan lengkap: Pesanan dengan Item Pesanan, rincian, dan Pembayaran. */
 export async function tagihanLengkap(tx: TxDb, t: BarisTagihan) {
   const item = await itemTagihan(tx, [t.id]);
-  const daftarPesanan = await tx.select().from(pesanan).where(eq(pesanan.tagihanId, t.id)).orderBy(asc(pesanan.createdAt), asc(pesanan.nomorPesanan));
+  const daftarPesanan = await pesananTagihan(tx, [t.id], item);
   const bayar = await tx.select().from(pembayaran).where(eq(pembayaran.tagihanId, t.id)).orderBy(asc(pembayaran.createdAt), asc(pembayaran.id));
   return {
-    ...ringkasTagihan(t, item, bayar),
-    pesanan: daftarPesanan.map((p) => tampilkanPesanan(p, item)),
+    ...ringkasTagihan(t, item, bayar, await mejaTagihan(tx, [t.id])),
+    pesanan: daftarPesanan.map((p) => tampilkanPesanan(p, item)).filter((p) => p.item.length > 0),
     pembayaran: bayar.map(tampilkanPembayaran),
   };
 }
@@ -194,17 +234,20 @@ export async function tagihanTerbuka(tx: TxDb, outletId: string) {
   const ids = daftar.map((t) => t.id);
   if (ids.length === 0) return [];
   const item = await itemTagihan(tx, ids);
-  const daftarPesanan = await tx.select().from(pesanan).where(inArray(pesanan.tagihanId, ids)).orderBy(asc(pesanan.createdAt), asc(pesanan.nomorPesanan));
+  const daftarPesanan = await pesananTagihan(tx, ids, item);
   const bayar = await tx.select().from(pembayaran).where(inArray(pembayaran.tagihanId, ids));
+  const mejanya = await mejaTagihan(tx, ids);
   return daftar.map((t) => {
     const itemnya = item.filter((i) => i.tagihanId === t.id);
+    const pesananIds = new Set(itemnya.map((i) => i.pesananId));
     return {
       ...ringkasTagihan(
         t,
         itemnya,
         bayar.filter((p) => p.tagihanId === t.id),
+        mejanya.filter((m) => m.tagihanId === t.id),
       ),
-      nomorPesanan: daftarPesanan.filter((p) => p.tagihanId === t.id).map((p) => p.nomorPesanan),
+      nomorPesanan: daftarPesanan.filter((p) => pesananIds.has(p.id)).map((p) => p.nomorPesanan),
       jumlahItem: itemnya.filter((i) => i.status !== 'batal').reduce((s, i) => s + i.jumlah, 0),
     };
   });

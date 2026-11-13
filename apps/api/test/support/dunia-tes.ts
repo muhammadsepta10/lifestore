@@ -91,6 +91,10 @@ export interface PemilikTes extends PenggunaMasuk {
   bukaKasir(data?: { outletId?: string; peran?: PeranTes; nama?: string; awalan?: string }): Promise<KasirTes>;
   /** Aktifkan satu Metode Bayar (default tunai) di Outlet (default Outlet pertama). */
   aktifkanMetodeBayar(jenis?: string, outletId?: string): Promise<void>;
+  /** Buat Meja berlabel `dari`..`sampai` di Outlet (default Outlet pertama); mengembalikan ID-nya berurutan. */
+  buatMeja(dari: number, sampai: number, outletId?: string): Promise<string[]>;
+  /** Ubah pengaturan Outlet (misal `pembulatanTunai`, `bayarDulu`). */
+  aturOutlet(data: object, outletId?: string): Promise<void>;
 }
 
 type PeranTes = 'manajer_outlet' | 'kasir' | 'pelayan' | 'dapur';
@@ -107,6 +111,10 @@ export interface KasirTes extends PerangkatTes {
   kirimPesanan(tagihanId: string, item: ItemPesananTes[], opsi?: { id?: string }): Permintaan;
   /** Bayar tunai (tanpa memeriksa status; pakai `.expect(...)`). */
   bayarTunai(tagihanId: string, diterima: number, opsi?: { id?: string }): Permintaan;
+  /** Buka Tagihan dine-in di sebuah Meja; mengembalikan ID Tagihan. */
+  bukaTagihanDineIn(mejaId: string, data?: { id?: string; namaPelanggan?: string }): Promise<string>;
+  /** Terima Pembayaran dengan Metode Bayar apa pun (tanpa memeriksa status; pakai `.expect(...)`). */
+  bayar(tagihanId: string, data: { id?: string; metode: string; jumlah?: number; diterima?: number; referensi?: string }): Permintaan;
 }
 
 /** Satu baris kiriman Pesanan; bentuknya sama dengan `item[]` di `POST /v1/tagihan/:id/pesanan`. */
@@ -284,10 +292,22 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
           },
           kirimPesanan: (tagihanId, item, o = {}) => p.post(`/v1/tagihan/${tagihanId}/pesanan`, { ...o, item }),
           bayarTunai: (tagihanId, diterima, o = {}) => p.post(`/v1/tagihan/${tagihanId}/pembayaran`, { ...o, metode: 'tunai', diterima }),
+          async bukaTagihanDineIn(mejaId, t = {}) {
+            const res = await p.post('/v1/tagihan', { kanal: 'dine_in', mejaId, ...t }).expect(201);
+            return res.body.id as string;
+          },
+          bayar: (tagihanId, data) => p.post(`/v1/tagihan/${tagihanId}/pembayaran`, data),
         };
       },
       async aktifkanMetodeBayar(jenis = 'tunai', o = outletId) {
         await pengguna.put(`/v1/outlet/${o}/metode-bayar/${jenis}`, { aktif: true }).expect(200);
+      },
+      async buatMeja(dari, sampai, o = outletId) {
+        const res = await pengguna.post(`/v1/outlet/${o}/meja/massal`, { dari, sampai, kapasitas: 4 }).expect(201);
+        return (res.body as { id: string }[]).map((m) => m.id);
+      },
+      async aturOutlet(data, o = outletId) {
+        await pengguna.patch(`/v1/outlet/${o}`, data).expect(200);
       },
     };
     return pemilik;

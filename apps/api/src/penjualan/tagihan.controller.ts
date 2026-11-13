@@ -3,17 +3,18 @@ import type { Kanal } from '@lifestore/domain';
 import { eq } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database } from '../database/database';
-import { tagihan } from '../database/schema';
+import { tagihan, tagihanMeja } from '../database/schema';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
 import { Jam } from '../umum/jam';
-import { objek, pilihan, teksOpsional, tidakDitemukan } from '../umum/validasi';
+import { objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
 import { tanggalOperasional } from './nomor';
 import { idDipakai, idKlien, tagihanDiOutlet, tagihanLengkap, tagihanTerbuka } from './tagihan';
 
-/** Kanal yang bisa dibuka dari kasir saat ini. Dine-in (dengan Meja) menyusul. */
-const KANAL_KASIR: readonly Kanal[] = ['bawa_pulang'];
+/** Kanal yang bisa dibuka dari kasir. Dine-in wajib memilih Meja. */
+const KANAL_KASIR: readonly Kanal[] = ['dine_in', 'bawa_pulang'];
 
 /** Tagihan dari layar kasir di Perangkat Terdaftar. Tagihan milik Outlet: semua kasir Outlet melihatnya. */
 @Controller('tagihan')
@@ -42,7 +43,25 @@ export class TagihanController {
     const id = idKlien(m);
     const kanal = pilihan(m, 'kanal', KANAL_KASIR);
     const namaPelanggan = teksOpsional(m, 'namaPelanggan', { maks: 100 }) ?? null;
+    const mejaId = m.mejaId === undefined || m.mejaId === null ? null : teks(m, 'mejaId', { maks: 64 });
+    if (kanal === 'dine_in' && !mejaId) throw tidakValid('mejaId', 'Tagihan dine-in wajib memilih Meja.');
+    if (kanal !== 'dine_in' && mejaId) throw tidakValid('mejaId', 'Hanya Tagihan dine-in yang menempati Meja.');
     const tx = this.db.tenant();
+    // Kunci Meja dulu: dua perangkat yang memilih Meja yang sama (atau kiriman ulang) antre di sini.
+    const mejanya = mejaId ? await kunciMeja(tx, p.outletId, mejaId) : null;
+    if (id) {
+      // Kiriman ulang: kembalikan Tagihan yang sudah dibuka sebelum memeriksa Meja (yang kini terisi olehnya).
+      const [lama] = await tx.select().from(tagihan).where(eq(tagihan.id, id));
+      if (lama) {
+        if (lama.outletId !== p.outletId) throw idDipakai();
+        res.status(200);
+        return tagihanLengkap(tx, lama);
+      }
+    }
+    if (mejanya) {
+      const [penghuni] = await penghuniMeja(tx, mejanya.id);
+      if (penghuni) throw mejaTerisi(mejanya.label, penghuni);
+    }
     const sekarang = this.jam.sekarang();
     const pajak = await profilPajakBerlaku(tx, p.outletId, tanggalOperasional(sekarang));
     if (!pajak) throw tidakDitemukan('Profil Pajak');
@@ -54,6 +73,7 @@ export class TagihanController {
         outletId: p.outletId,
         perangkatId: p.id,
         kanal,
+        mejaId,
         namaPelanggan,
         dibukaOlehAnggotaId: pelaku.anggotaId,
         dibukaPada: sekarang,
@@ -67,6 +87,7 @@ export class TagihanController {
       .onConflictDoNothing()
       .returning();
     if (baru) {
+      if (mejaId) await tx.insert(tagihanMeja).values({ tenantId: p.tenantId, outletId: p.outletId, tagihanId: baru.id, mejaId });
       res.status(201);
       return tagihanLengkap(tx, baru);
     }
