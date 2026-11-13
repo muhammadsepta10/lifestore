@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { urlApiInternal } from './status-api';
 
 export const COOKIE_SESI = 'lifestore_sesi';
+/** Token Perangkat Terdaftar (kasir/KDS), disimpan di perangkat sebagai cookie httpOnly. */
+export const COOKIE_PERANGKAT = 'lifestore_perangkat';
 
 export interface HasilApi<T> {
   ok: boolean;
@@ -9,13 +11,19 @@ export interface HasilApi<T> {
   body: T;
 }
 
-/** Panggil API dari server Next.js, membawa token sesi dari cookie bila ada. */
+/**
+ * Panggil API dari server Next.js, membawa token sesi dari cookie bila ada.
+ * `perangkat: true` memakai token Perangkat Terdaftar (`Authorization: Perangkat`) untuk layar kasir.
+ */
 export async function panggilApi<T = unknown>(
   path: string,
-  opsi: { method?: string; body?: unknown; tanpaSesi?: boolean } = {},
+  opsi: { method?: string; body?: unknown; tanpaSesi?: boolean; perangkat?: boolean } = {},
 ): Promise<HasilApi<T>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (!opsi.tanpaSesi) {
+  if (opsi.perangkat) {
+    const token = (await cookies()).get(COOKIE_PERANGKAT)?.value;
+    if (token) headers.Authorization = `Perangkat ${token}`;
+  } else if (!opsi.tanpaSesi) {
     const token = (await cookies()).get(COOKIE_SESI)?.value;
     if (token) headers.Authorization = `Bearer ${token}`;
   }

@@ -124,6 +124,11 @@ export default async function HalamanDashboard() {
                     {k.atur}
                   </Link>
                 ) : null}
+                {l.langkah === 'meja' || l.langkah === 'metode_bayar' ? (
+                  <Link href={`/meja-bayar?outlet=${o.id}`} style={gayaTombolSekunder}>
+                    {k.atur}
+                  </Link>
+                ) : null}
                 {l.status !== 'selesai' ? (
                   <form action={ubahLewati}>
                     <input type="hidden" name="outletId" value={o.id} />
