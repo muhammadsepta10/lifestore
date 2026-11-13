@@ -119,6 +119,11 @@ export default async function HalamanDashboard() {
                 >
                   {k.status[l.status]}
                 </span>
+                {l.langkah === 'menu' || l.langkah === 'stasiun' ? (
+                  <Link href={`/menu?outlet=${o.id}`} style={gayaTombolSekunder}>
+                    {k.atur}
+                  </Link>
+                ) : null}
                 {l.status !== 'selesai' ? (
                   <form action={ubahLewati}>
                     <input type="hidden" name="outletId" value={o.id} />
