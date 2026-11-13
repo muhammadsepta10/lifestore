@@ -143,4 +143,25 @@ describe('Dashboard: Masa Coba dan checklist Siap Jualan', () => {
     await pemilik.post(`/v1/outlet/${pemilik.outletId}/perangkat/${tablet.id}/cabut`).expect(200);
     expect(statusLangkah((await pemilik.get(url).expect(200)).body).perangkat).toBe('belum');
   });
+
+  it('langkah Meja selesai saat Outlet punya Meja aktif', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const url = `/v1/outlet/${pemilik.outletId}/siap-jualan`;
+    const [m] = (await pemilik.post(`/v1/outlet/${pemilik.outletId}/meja/massal`, { dari: 1, sampai: 1, kapasitas: 4 }).expect(201)).body;
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).meja).toBe('selesai');
+    await pemilik.patch(`/v1/outlet/${pemilik.outletId}/meja/${m.id}`, { aktif: false }).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).meja).toBe('belum');
+  });
+
+  it('langkah Metode Bayar selesai saat Outlet punya Metode Bayar aktif', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const outletKedua = await pemilik.tambahOutlet();
+    const url = `/v1/outlet/${pemilik.outletId}/siap-jualan`;
+    await pemilik.put(`/v1/outlet/${outletKedua}/metode-bayar/tunai`, { aktif: true }).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).metode_bayar).toBe('belum');
+    await pemilik.put(`/v1/outlet/${pemilik.outletId}/metode-bayar/qris_statis`, { aktif: true }).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).metode_bayar).toBe('selesai');
+    await pemilik.put(`/v1/outlet/${pemilik.outletId}/metode-bayar/qris_statis`, { aktif: false }).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).metode_bayar).toBe('belum');
+  });
 });

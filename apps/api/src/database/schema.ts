@@ -464,3 +464,103 @@ export const menuHabis = pgTable(
   },
   (t) => [uniqueIndex().on(t.outletId, t.menuId), index().on(t.tenantId)],
 );
+
+// ---------------------------------------------------------------------------
+// Meja, Metode Bayar, dan Shift (#37)
+// ---------------------------------------------------------------------------
+
+/**
+ * Meja di satu Outlet. `label` adalah nomor/nama yang tertulis di meja (bukan entitasnya).
+ * Status Kosong/Terisi diturunkan dari Tagihan terbuka, tidak disimpan.
+ */
+export const meja = pgTable(
+  'meja',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    label: text().notNull(),
+    kapasitas: integer().notNull(),
+    aktif: boolean().notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), uniqueIndex().on(t.outletId, t.label)],
+);
+
+/**
+ * Metode Bayar manual per Outlet (satu baris per jenis). Jenis yang belum punya baris dianggap nonaktif.
+ * `keterangan`: misal bank tujuan transfer atau nama EDC.
+ */
+export const metodeBayar = pgTable(
+  'metode_bayar',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    jenis: text().notNull(),
+    keterangan: text(),
+    aktif: boolean().notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), uniqueIndex().on(t.outletId, t.jenis)],
+);
+
+/**
+ * Shift: satu sesi laci kas di satu Perangkat Terdaftar, `terbuka → ditutup`.
+ * Paling banyak satu Shift terbuka per perangkat (indeks unik parsial).
+ * Angka penutupan (kas seharusnya, Hitung Buta, selisih) dibekukan saat ditutup.
+ */
+export const shift = pgTable(
+  'shift',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    perangkatId: text()
+      .notNull()
+      .references(() => perangkatTerdaftar.id),
+    status: text().notNull().default('terbuka'),
+    kasAwal: bigint({ mode: 'number' }).notNull(),
+    dibukaOlehAnggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    dibukaPada: timestamp({ withTimezone: true }).notNull(),
+    ditutupOlehAnggotaId: text().references(() => anggota.id),
+    ditutupPada: timestamp({ withTimezone: true }),
+    kasSeharusnya: bigint({ mode: 'number' }),
+    hitungButa: bigint({ mode: 'number' }),
+    selisih: bigint({ mode: 'number' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index().on(t.tenantId),
+    index().on(t.outletId),
+    uniqueIndex('shift_terbuka_per_perangkat').on(t.perangkatId).where(sql`status = 'terbuka'`),
+  ],
+);
+
+/** Kas masuk/keluar di dalam Shift, dengan alasan wajib. Append-only. */
+export const kasShift = pgTable(
+  'kas_shift',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    shiftId: text()
+      .notNull()
+      .references(() => shift.id),
+    jenis: text().notNull(),
+    jumlah: bigint({ mode: 'number' }).notNull(),
+    alasan: text().notNull(),
+    anggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.shiftId)],
+);

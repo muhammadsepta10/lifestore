@@ -84,13 +84,28 @@ export interface PemilikTes extends PenggunaMasuk {
   anggotaSaya(): Promise<string>;
   /** Siapkan Perangkat Terdaftar lalu daftarkan dengan kodenya, seperti manajer di tablet. */
   daftarkanPerangkat(data?: { outletId?: string; nama?: string; awalan?: string }): Promise<PerangkatTes>;
+  /**
+   * Siapkan kasir di Perangkat Terdaftar baru: karyawan ber-PIN dengan Peran (default `kasir`)
+   * di Outlet itu, perangkat didaftarkan, lalu karyawan masuk dengan PIN.
+   */
+  bukaKasir(data?: { outletId?: string; peran?: PeranTes; nama?: string; awalan?: string }): Promise<KasirTes>;
+}
+
+type PeranTes = 'manajer_outlet' | 'kasir' | 'pelayan' | 'dapur';
+
+/** Perangkat Terdaftar dengan karyawan yang sudah masuk PIN (hasil `pemilik.bukaKasir`). */
+export interface KasirTes extends PerangkatTes {
+  anggotaId: string;
+  pin: string;
+  /** Buka Shift dengan modal awal laci; mengembalikan ID Shift. */
+  bukaShift(kasAwal: number): Promise<string>;
 }
 
 export interface DataKaryawan {
   nama?: string;
   email?: string;
   pin?: string;
-  penugasan?: { outletId: string; peran: 'manajer_outlet' | 'kasir' | 'pelayan' | 'dapur' }[];
+  penugasan?: { outletId: string; peran: PeranTes }[];
 }
 
 /** Perangkat Terdaftar: klien HTTP yang membawa token perangkat (`Authorization: Perangkat`). */
@@ -182,7 +197,7 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
         .expect(201);
       return res.body.id as string;
     };
-    return {
+    const pemilik: PemilikTes = {
       ...pengguna,
       kataSandi,
       tenantId: pengguna.tenant[0]!.id,
@@ -229,7 +244,26 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
         const res = await http.post('/v1/perangkat/daftar').send({ kode: siap.body.kodePendaftaran }).expect(200);
         return perangkatTes(res.body.tokenPerangkat, res.body.perangkat);
       },
+      async bukaKasir(d = {}) {
+        const target = d.outletId ?? outletId;
+        const pin = String(1000 + (nomor % 9000));
+        const anggotaId = await pemilik.tambahKaryawan({ ...(d.nama ? { nama: d.nama } : {}), pin, penugasan: [{ outletId: target, peran: d.peran ?? 'kasir' }] });
+        // Awalan unik per kasir supaya beberapa perangkat di satu Outlet tidak bentrok.
+        const awalan = d.awalan ?? `K${String.fromCharCode(65 + (nomor % 26))}${String.fromCharCode(65 + (Math.floor(nomor / 26) % 26))}`;
+        const p = await pemilik.daftarkanPerangkat({ outletId: target, awalan });
+        await p.masukPin(anggotaId, pin).expect(200);
+        return {
+          ...p,
+          anggotaId,
+          pin,
+          async bukaShift(kasAwal) {
+            const res = await p.post('/v1/shift', { kasAwal }).expect(201);
+            return res.body.id as string;
+          },
+        };
+      },
     };
+    return pemilik;
   }
 
   function perangkatTes(token: string, p: { id: string; outletId: string; awalan: string }): PerangkatTes {

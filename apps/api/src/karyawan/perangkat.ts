@@ -26,7 +26,6 @@ import {
   muatAnggota,
   PERAN_PEMILIK,
   type Pelaku,
-  PelakuAktif,
   periksaIzinRute,
   PerluIzin,
   type RequestBerpelaku,
@@ -308,19 +307,5 @@ export class PerangkatKasirController {
   @TanpaAnggota()
   async keluar(@Perangkat() p: PerangkatAktif): Promise<void> {
     await this.db.tenant().update(perangkatTerdaftar).set({ anggotaAktifId: null, anggotaMasukPada: null }).where(eq(perangkatTerdaftar.id, p.id));
-  }
-
-  /** Buka kasir di Perangkat Terdaftar: butuh izin `kasir.buka` di Outlet perangkat. */
-  @Get('kasir')
-  @UseGuards(PerangkatGuard)
-  @PerluIzin('kasir.buka')
-  async kasir(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku) {
-    const [o] = await this.db.tenant().select({ id: outlet.id, nama: outlet.nama }).from(outlet).where(eq(outlet.id, p.outletId));
-    return {
-      perangkat: { id: p.id, nama: p.nama, awalan: p.awalan },
-      outlet: o,
-      anggota: { id: pelaku.anggotaId, peran: pelaku.peran },
-      izin: daftarIzin(pelaku, p.outletId),
-    };
   }
 }

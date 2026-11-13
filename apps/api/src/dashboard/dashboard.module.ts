@@ -7,7 +7,9 @@ import { adaKaryawanSiap } from '../karyawan/karyawan.module';
 import { adaPerangkatAktif } from '../karyawan/perangkat';
 import { adaMenuAktif } from '../menu/menu-outlet.controller';
 import { adaStasiun } from '../menu/stasiun.controller';
+import { adaMejaAktif } from '../meja/meja.module';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
+import { adaMetodeBayarAktif } from '../pembayaran/metode-bayar.module';
 import { hariIni, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { PerluIzin } from '../izin/izin';
 
@@ -39,8 +41,8 @@ const PEMERIKSA: Record<LangkahSiapJualan, (tx: TxDb, o: BarisOutlet) => Promise
   profil_pajak: async (tx, o) => (await profilPajakBerlaku(tx, o.id, hariIni())) !== undefined,
   menu: (tx, o) => adaMenuAktif(tx, o),
   stasiun: (tx, o) => adaStasiun(tx, o.id),
-  metode_bayar: async () => false,
-  meja: async () => false,
+  metode_bayar: (tx, o) => adaMetodeBayarAktif(tx, o.id),
+  meja: (tx, o) => adaMejaAktif(tx, o.id),
   karyawan: (tx, o) => adaKaryawanSiap(tx, o.id),
   perangkat: (tx, o) => adaPerangkatAktif(tx, o.id),
 };

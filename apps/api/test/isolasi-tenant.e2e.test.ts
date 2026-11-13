@@ -21,6 +21,10 @@ describe('Isolasi Tenant lewat API', () => {
   let karyawanB: string;
   let tabletA: PerangkatTes;
   let tabletB: PerangkatTes;
+  // Meja, Metode Bayar, dan Shift Tenant B
+  let mejaB: string;
+  let shiftTerbukaB: string;
+  let shiftDitutupB: string;
 
   beforeAll(async () => {
     dunia = await buatDuniaTes();
@@ -52,6 +56,14 @@ describe('Isolasi Tenant lewat API', () => {
     karyawanB = await b.tambahKaryawan({ nama: 'Kasir B', pin: '1234', penugasan: [{ outletId: b.outletId, peran: 'kasir' }] });
     tabletB = await b.daftarkanPerangkat({ awalan: 'B' });
     tabletA = await a.daftarkanPerangkat({ awalan: 'A' });
+
+    mejaB = (await b.post(`/v1/outlet/${b.outletId}/meja/massal`, { dari: 1, sampai: 2, kapasitas: 4 }).expect(201)).body[0].id;
+    await b.put(`/v1/outlet/${b.outletId}/metode-bayar/qris_statis`, { aktif: true, keterangan: 'QRIS Warung B' }).expect(200);
+    await tabletB.masukPin(karyawanB, '1234').expect(200);
+    shiftDitutupB = (await tabletB.post('/v1/shift', { kasAwal: 1_000 }).expect(201)).body.id;
+    await tabletB.post(`/v1/shift/${shiftDitutupB}/kas`, { jenis: 'keluar', jumlah: 500, alasan: 'Kas Warung B' }).expect(201);
+    await tabletB.post(`/v1/shift/${shiftDitutupB}/tutup`, { hitungButa: 500 }).expect(200);
+    shiftTerbukaB = (await tabletB.post('/v1/shift', { kasAwal: 2_000 }).expect(201)).body.id;
   });
   afterAll(() => dunia?.tutup());
 
@@ -69,6 +81,10 @@ describe('Isolasi Tenant lewat API', () => {
       stasiun: (await b.get(`/v1/outlet/${b.outletId}/stasiun`).expect(200)).body,
       karyawan: (await b.get('/v1/karyawan').expect(200)).body,
       perangkat: (await b.get(`/v1/outlet/${b.outletId}/perangkat`).expect(200)).body,
+      meja: (await b.get(`/v1/outlet/${b.outletId}/meja`).expect(200)).body,
+      metodeBayar: (await b.get(`/v1/outlet/${b.outletId}/metode-bayar`).expect(200)).body,
+      shift: (await b.get(`/v1/outlet/${b.outletId}/shift`).expect(200)).body,
+      laporanShift: (await b.get(`/v1/outlet/${b.outletId}/shift/${shiftDitutupB}/laporan`).expect(200)).body,
     };
   }
 
@@ -102,6 +118,11 @@ describe('Isolasi Tenant lewat API', () => {
       `/v1/outlet/${b.outletId}/menu`,
       `/v1/outlet/${b.outletId}/stasiun`,
       `/v1/outlet/${b.outletId}/perangkat`,
+      `/v1/outlet/${b.outletId}/meja`,
+      `/v1/outlet/${b.outletId}/metode-bayar`,
+      `/v1/outlet/${b.outletId}/shift`,
+      `/v1/outlet/${b.outletId}/shift/${shiftDitutupB}/laporan`,
+      `/v1/outlet/${a.outletId}/shift/${shiftDitutupB}/laporan`,
     ]) {
       const res = await a.get(path);
       expect({ path, status: res.status }).toEqual({ path, status: 404 });
@@ -146,6 +167,11 @@ describe('Isolasi Tenant lewat API', () => {
       () => a.post(`/v1/outlet/${b.outletId}/perangkat`, { nama: 'Selundupan', awalan: 'X' }),
       () => a.post(`/v1/outlet/${b.outletId}/perangkat/${tabletB.id}/cabut`),
       () => a.post(`/v1/outlet/${a.outletId}/perangkat/${tabletB.id}/cabut`),
+      // Meja dan Metode Bayar Tenant B
+      () => a.post(`/v1/outlet/${b.outletId}/meja/massal`, { dari: 10, sampai: 11, kapasitas: 2 }),
+      () => a.patch(`/v1/outlet/${b.outletId}/meja/${mejaB}`, { aktif: false }),
+      () => a.patch(`/v1/outlet/${a.outletId}/meja/${mejaB}`, { aktif: false }),
+      () => a.put(`/v1/outlet/${b.outletId}/metode-bayar/qris_statis`, { aktif: false }),
     ];
     for (const [i, coba] of percobaan.entries()) {
       const res = await coba();
@@ -198,5 +224,34 @@ describe('Isolasi Tenant lewat API', () => {
     const sebelum = (await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body;
     expect((await tabletA.post(`/v1/kasir/menu/${menuB}/habis`, { habis: false })).status).toBe(404);
     expect((await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body).toEqual(sebelum);
+  });
+
+  it('Perangkat Terdaftar Tenant A tidak menyentuh Meja, Metode Bayar, atau Shift Tenant B', async () => {
+    const sebelum = await dataB();
+    await a.aturPin(await a.anggotaSaya(), '4321');
+    await tabletA.masukPin(await a.anggotaSaya(), '4321').expect(200);
+
+    const layar = (await tabletA.get('/v1/kasir').expect(200)).body;
+    expect(layar.shift).toBeNull();
+    expect(layar.metodeBayar).toEqual([]);
+    expect((await tabletA.get('/v1/kasir/meja').expect(200)).body).toEqual([]);
+    expect((await tabletA.get('/v1/kasir/metode-bayar').expect(200)).body).toEqual([]);
+    expect((await tabletA.get('/v1/shift/aktif').expect(200)).body.shift).toBeNull();
+
+    for (const coba of [
+      () => tabletA.post(`/v1/kasir/meja/${mejaB}/nonaktifkan`),
+      () => tabletA.post(`/v1/kasir/meja/${mejaB}/aktifkan`),
+      () => tabletA.post(`/v1/shift/${shiftTerbukaB}/kas`, { jenis: 'keluar', jumlah: 1, alasan: 'Diretas' }),
+      () => tabletA.post(`/v1/shift/${shiftTerbukaB}/tutup`, { hitungButa: 0 }),
+      () => tabletA.get(`/v1/shift/${shiftDitutupB}/laporan`),
+    ]) {
+      expect((await coba()).status).toBe(404);
+    }
+    // ID Shift Tenant B yang dipakai ulang sebagai ID buatan klien tidak membuka atau membocorkan Shift itu.
+    const bentrok = await tabletA.post('/v1/shift', { id: shiftTerbukaB, kasAwal: 1 });
+    expect(bentrok.status).toBe(409);
+    expect(JSON.stringify(bentrok.body)).not.toContain('2000');
+    expect(await dataB()).toEqual(sebelum);
+    expect((await tabletB.get('/v1/shift/aktif').expect(200)).body.shift.id).toBe(shiftTerbukaB);
   });
 });

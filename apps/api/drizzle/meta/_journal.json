@@ -64,6 +64,20 @@
       "when": 1794571519423,
       "tag": "0008_rls_menu",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794571775217,
+      "tag": "0009_meja_metode_bayar_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794571775867,
+      "tag": "0010_rls_meja_metode_bayar_shift",
+      "breakpoints": true
     }
   ]
 }
