@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { AuditModule } from './audit/audit.module';
+import { DapurModule } from './dapur/dapur.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
 import { EmailModule } from './email/email.module';
@@ -39,6 +40,7 @@ export class AppModule {
         ShiftModule,
         KasirModule,
         PenjualanModule,
+        DapurModule,
       ],
     };
   }

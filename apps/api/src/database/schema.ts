@@ -591,7 +591,7 @@ export const tagihan = pgTable(
     /** Meja untuk Tagihan dine-in; null untuk bawa pulang. */
     mejaId: text().references(() => meja.id),
     namaPelanggan: text(),
-    status: text().$type<'terbuka' | 'lunas' | 'void'>().notNull().default('terbuka'),
+    status: text().$type<'terbuka' | 'lunas' | 'void' | 'batal'>().notNull().default('terbuka'),
     dibukaOlehAnggotaId: text()
       .notNull()
       .references(() => anggota.id),
@@ -613,6 +613,17 @@ export const tagihan = pgTable(
     dasarPajak: bigint({ mode: 'number' }),
     pajak: bigint({ mode: 'number' }),
     total: bigint({ mode: 'number' }),
+    // Diskon Manual (satu per Tagihan): persen atau nominal rupiah, dengan alasan wajib.
+    diskonJenis: text().$type<'persen' | 'nominal'>(),
+    diskonNilai: numeric({ precision: 14, scale: 2, mode: 'number' }),
+    diskonAlasan: text(),
+    diskonOlehAnggotaId: text().references(() => anggota.id),
+    diskonPenyetujuAnggotaId: text().references(() => anggota.id),
+    /** Alasan void, atau alasan pembatalan Tagihan tanpa item. */
+    alasanTutup: text(),
+    /** Shift terbuka di perangkat yang melakukan void; dasar angka void di Laporan Shift. */
+    voidShiftId: text().references(() => shift.id),
+    voidPenyetujuAnggotaId: text().references(() => anggota.id),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.tenantId), index().on(t.outletId, t.status), uniqueIndex().on(t.outletId, t.nomorNota)],

@@ -110,13 +110,29 @@ export function tampilkanItem(i: ItemBerstatus) {
   };
 }
 
+/**
+ * Status Pesanan, diturunkan dari Item Pesanan di dalamnya (item batal diabaikan):
+ * `batal` bila semua itemnya batal, `disajikan` bila semua sudah disajikan, `siap` bila semua
+ * sudah siap atau disajikan, `dimasak` bila ada yang sudah mulai dikerjakan, selain itu `menunggu`.
+ */
+export function statusPesanan(status: readonly StatusItemPesanan[]): StatusItemPesanan {
+  const aktif = status.filter((s) => s !== 'batal');
+  if (aktif.length === 0) return status.length > 0 ? 'batal' : 'menunggu';
+  if (aktif.every((s) => s === 'disajikan')) return 'disajikan';
+  if (aktif.every((s) => s === 'siap' || s === 'disajikan')) return 'siap';
+  if (aktif.some((s) => s !== 'menunggu')) return 'dimasak';
+  return 'menunggu';
+}
+
 export function tampilkanPesanan(p: typeof pesanan.$inferSelect, item: readonly ItemBerstatus[]) {
+  const itemnya = item.filter((i) => i.pesananId === p.id);
   return {
     id: p.id,
     tagihanId: p.tagihanId,
     nomorPesanan: p.nomorPesanan,
     dikirimPada: p.dikirimPada,
-    item: item.filter((i) => i.pesananId === p.id).map(tampilkanItem),
+    status: statusPesanan(itemnya.map((i) => i.status)),
+    item: itemnya.map(tampilkanItem),
   };
 }
 
