@@ -38,6 +38,10 @@ services:
       # Peran login tanpa BYPASSRLS, anggota lifestore_app (lihat docker/postgres/init).
       DATABASE_URL: postgres://lifestore_api:lifestore_dev@postgres:5432/lifestore
       PORT: "3001"
+      # Tautan verifikasi email. Tanpa RESEND_API_KEY, email ditulis ke log api (lokal).
+      WEB_URL: http://localhost:8080
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_PENGIRIM: ${EMAIL_PENGIRIM:-}
     depends_on:
       postgres: { condition: service_healthy }
 

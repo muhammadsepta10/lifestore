@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { t } from '../i18n/id';
 import { ambilStatusApi } from '../lib/status-api';
 
@@ -44,6 +45,10 @@ export default async function Beranda() {
             <Pil sehat={dbSehat} label={dbSehat ? k.status.sehat : k.status.gagal} />
           </dd>
         </dl>
+        <p style={{ display: 'flex', gap: 16, marginTop: 20 }}>
+          <Link href="/daftar">{k.beranda.daftar}</Link>
+          <Link href="/masuk">{k.beranda.masuk}</Link>
+        </p>
       </section>
     </main>
   );
