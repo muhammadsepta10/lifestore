@@ -1,27 +1,5 @@
-import { Body, Controller, HttpCode, Module, Param, Post, UseGuards } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { Database } from '../src/database/database';
-import { SesiGuard } from '../src/identitas/sesi.guard';
-import { type PermintaanItemPesanan, siapkanItemPesanan } from '../src/menu/item-pesanan';
-import { buatDuniaTes, type DuniaTes, type PemilikTes } from './support/dunia-tes';
-
-// Penjualan (Tagihan, Item Pesanan) belum ada. Controller khusus tes ini memanggil
-// `siapkanItemPesanan`, fungsi yang nanti dipakai endpoint kasir untuk menyalin harga Menu
-// ke Item Pesanan, supaya aturan Habis, nonaktif, Varian, dan Grup Pilihan teruji lewat HTTP.
-@Controller('tes/outlet/:outletId/item-pesanan')
-@UseGuards(SesiGuard)
-class PengujiItemPesananController {
-  constructor(private readonly db: Database) {}
-
-  @Post()
-  @HttpCode(200)
-  async siapkan(@Param('outletId') outletId: string, @Body() body: PermintaanItemPesanan) {
-    return siapkanItemPesanan(this.db.tenant(), outletId, body);
-  }
-}
-
-@Module({ controllers: [PengujiItemPesananController] })
-class PengujiItemPesananModule {}
+import { buatDuniaTes, type DuniaTes, type KasirTes, type PemilikTes } from './support/dunia-tes';
 
 type MenuDijual = { id: string; nama: string; harga: number; habis: boolean; stasiunId: string | null; varian: { id: string; harga: number }[] };
 
@@ -35,7 +13,7 @@ async function menuDiOutlet(pemilik: PemilikTes, outletId: string, menuId: strin
 describe('Menu di Outlet: Stasiun, override harga, Habis', () => {
   let dunia: DuniaTes;
   beforeAll(async () => {
-    dunia = await buatDuniaTes({ modulTambahan: [PengujiItemPesananModule] });
+    dunia = await buatDuniaTes();
   });
   afterAll(() => dunia?.tutup());
 
@@ -147,13 +125,16 @@ describe('Menu di Outlet: Stasiun, override harga, Habis', () => {
     expect((await menuDiOutlet(pemilik, pemilik.outletId, ayam)).habis).toBe(true);
     expect((await menuDiOutlet(pemilik, cabang, ayam)).habis).toBe(false);
 
-    const habis = await pemilik.post(`/v1/tes/outlet/${pemilik.outletId}/item-pesanan`, { menuId: ayam }).expect(409);
+    const kasirPusat = await pemilik.bukaKasir();
+    const kasirCabang = await pemilik.bukaKasir({ outletId: cabang });
+    const tagihanPusat = await kasirPusat.bukaTagihan();
+    const habis = await kasirPusat.kirimPesanan(tagihanPusat, [{ menuId: ayam }]).expect(409);
     expect(habis.body.kode).toBe('menu_habis');
-    await pemilik.post(`/v1/tes/outlet/${cabang}/item-pesanan`, { menuId: ayam }).expect(200);
+    await kasirCabang.kirimPesanan(await kasirCabang.bukaTagihan(), [{ menuId: ayam }]).expect(201);
 
     await pemilik.put(`/v1/outlet/${pemilik.outletId}/menu/${ayam}/habis`, { habis: false }).expect(200);
     expect((await menuDiOutlet(pemilik, pemilik.outletId, ayam)).habis).toBe(false);
-    await pemilik.post(`/v1/tes/outlet/${pemilik.outletId}/item-pesanan`, { menuId: ayam }).expect(200);
+    await kasirPusat.kirimPesanan(tagihanPusat, [{ menuId: ayam }]).expect(201);
   });
 });
 
@@ -166,7 +147,7 @@ describe('Item Pesanan menyalin harga Menu yang berlaku di Outlet', () => {
   let grup: { id: string; pilihan: { id: string; nama: string }[] }[];
 
   beforeAll(async () => {
-    dunia = await buatDuniaTes({ modulTambahan: [PengujiItemPesananModule] });
+    dunia = await buatDuniaTes();
     pemilik = await dunia.daftarTenant();
     mall = await pemilik.tambahOutlet({ nama: 'Outlet Mall' });
     kopi = await pemilik.buatMenu({
@@ -190,7 +171,19 @@ describe('Item Pesanan menyalin harga Menu yang berlaku di Outlet', () => {
   });
   afterAll(() => dunia?.tutup());
 
-  const pesan = (outletId: string, body: object) => pemilik.post(`/v1/tes/outlet/${outletId}/item-pesanan`, body);
+  // Kasir mengirim satu Item Pesanan lewat endpoint kirim Pesanan yang sungguhan; satu kasir dan satu
+  // Tagihan per Outlet. Respons sukses diringkas menjadi Item Pesanan pertamanya.
+  const kasirDi = new Map<string, { kasir: KasirTes; tagihanId: string }>();
+  async function pesan(outletId: string, body: { menuId: string; varianId?: string; pilihanIds?: (string | undefined)[] }) {
+    let k = kasirDi.get(outletId);
+    if (!k) {
+      const kasir = await pemilik.bukaKasir({ outletId });
+      k = { kasir, tagihanId: await kasir.bukaTagihan() };
+      kasirDi.set(outletId, k);
+    }
+    const res = await k.kasir.post(`/v1/tagihan/${k.tagihanId}/pesanan`, { item: [body] });
+    return { status: res.status, body: res.status === 201 ? res.body.item[0] : res.body };
+  }
 
   it('menyalin nama, harga Varian Outlet, pilihan berbayar, tanda bebas pajak, dan Stasiun', async () => {
     const bar = await pemilik.buatStasiun('Bar', mall);
@@ -199,8 +192,8 @@ describe('Item Pesanan menyalin harga Menu yang berlaku di Outlet', () => {
       menuId: kopi,
       varianId: varian[1]!.id,
       pilihanIds: [grup[0]!.pilihan[1]!.id, grup[1]!.pilihan[0]!.id, grup[1]!.pilihan[2]!.id],
-    }).expect(200);
-    expect(res.body).toEqual({
+    });
+    expect(res.body).toMatchObject({
       menuId: kopi,
       nama: 'Kopi Susu',
       varianId: varian[1]!.id,
@@ -216,16 +209,16 @@ describe('Item Pesanan menyalin harga Menu yang berlaku di Outlet', () => {
     });
 
     // Outlet tanpa override memakai harga Merek; Varian Reguler tidak di-override di mall.
-    const pusat = await pesan(pemilik.outletId, { menuId: kopi, varianId: varian[1]!.id, pilihanIds: [grup[0]!.pilihan[0]!.id] }).expect(200);
+    const pusat = await pesan(pemilik.outletId, { menuId: kopi, varianId: varian[1]!.id, pilihanIds: [grup[0]!.pilihan[0]!.id] });
     expect([pusat.body.hargaSatuan, pusat.body.stasiunId]).toEqual([24000, null]);
-    const reguler = await pesan(mall, { menuId: kopi, varianId: varian[0]!.id, pilihanIds: [grup[0]!.pilihan[0]!.id] }).expect(200);
+    const reguler = await pesan(mall, { menuId: kopi, varianId: varian[0]!.id, pilihanIds: [grup[0]!.pilihan[0]!.id] });
     expect(reguler.body.hargaSatuan).toBe(18000);
   });
 
   it('Varian wajib tepat satu dan jumlah pilihan mengikuti minimum/maksimum Grup Pilihan', async () => {
     const manisNormal = grup[0]!.pilihan[0]!.id;
     const [boba, cincau, jelly] = grup[1]!.pilihan.map((p) => p.id);
-    const kasus: [string, object][] = [
+    const kasus: [string, { menuId: string; varianId?: string; pilihanIds?: (string | undefined)[] }][] = [
       ['tanpa Varian', { menuId: kopi, pilihanIds: [manisNormal] }],
       ['Varian Menu lain', { menuId: kopi, varianId: 'varian-asing', pilihanIds: [manisNormal] }],
       ['kurang dari minimum', { menuId: kopi, varianId: varian[0]!.id, pilihanIds: [] }],
@@ -239,14 +232,14 @@ describe('Item Pesanan menyalin harga Menu yang berlaku di Outlet', () => {
     }
 
     const tanpaVarian = await pemilik.buatMenu({ nama: 'Air Mineral', harga: 4000 });
-    await pesan(mall, { menuId: tanpaVarian, varianId: varian[0]!.id }).expect(400);
-    expect((await pesan(mall, { menuId: tanpaVarian }).expect(200)).body).toMatchObject({ varianId: null, namaVarian: null, hargaSatuan: 4000, pilihan: [] });
+    expect((await pesan(mall, { menuId: tanpaVarian, varianId: varian[0]!.id })).status).toBe(400);
+    expect((await pesan(mall, { menuId: tanpaVarian })).body).toMatchObject({ varianId: null, namaVarian: null, hargaSatuan: 4000, pilihan: [] });
   });
 
   it('Menu nonaktif tidak bisa dipesan', async () => {
     const lama = await pemilik.buatMenu({ nama: 'Menu Lama', harga: 10000 });
     await pemilik.patch(`/v1/menu/${lama}`, { aktif: false }).expect(200);
-    const res = await pesan(mall, { menuId: lama }).expect(409);
-    expect(res.body.kode).toBe('menu_nonaktif');
+    const res = await pesan(mall, { menuId: lama });
+    expect([res.status, res.body.kode]).toEqual([409, 'menu_nonaktif']);
   });
 });

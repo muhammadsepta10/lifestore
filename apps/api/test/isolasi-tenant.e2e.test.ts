@@ -254,4 +254,68 @@ describe('Isolasi Tenant lewat API', () => {
     expect(await dataB()).toEqual(sebelum);
     expect((await tabletB.get('/v1/shift/aktif').expect(200)).body.shift.id).toBe(shiftTerbukaB);
   });
+
+  it('Perangkat Terdaftar Tenant A tidak melihat, menambah Pesanan ke, atau membayar Tagihan Tenant B', async () => {
+    await b.aktifkanMetodeBayar('tunai');
+    const dijualB = await b.buatMenu({ nama: 'Soto Warung B', harga: 10_000 });
+    await tabletB.masukPin(karyawanB, '1234').expect(200);
+    const terbukaB = (await tabletB.post('/v1/tagihan', { kanal: 'bawa_pulang', namaPelanggan: 'Pelanggan Warung B' }).expect(201)).body.id;
+    const pesananB = (await tabletB.post(`/v1/tagihan/${terbukaB}/pesanan`, { item: [{ menuId: dijualB }] }).expect(201)).body;
+    const lunasB = (await tabletB.post('/v1/tagihan', { kanal: 'bawa_pulang' }).expect(201)).body.id;
+    await tabletB.post(`/v1/tagihan/${lunasB}/pesanan`, { item: [{ menuId: dijualB }] }).expect(201);
+    const bayarB = (await tabletB.post(`/v1/tagihan/${lunasB}/pembayaran`, { metode: 'tunai', diterima: 11_000 }).expect(201)).body.pembayaran;
+    const tagihanB = async () => [
+      (await tabletB.get('/v1/tagihan').expect(200)).body,
+      (await tabletB.get(`/v1/tagihan/${terbukaB}`).expect(200)).body,
+      (await tabletB.get(`/v1/tagihan/${lunasB}`).expect(200)).body,
+    ];
+    const sebelum = await tagihanB();
+
+    await a.aktifkanMetodeBayar('tunai');
+    await a.aturPin(await a.anggotaSaya(), '4321');
+    await tabletA.masukPin(await a.anggotaSaya(), '4321').expect(200);
+    await tabletA.post('/v1/shift', { kasAwal: 0 }).expect(201);
+    expect((await tabletA.get('/v1/tagihan').expect(200)).body).toEqual([]);
+    for (const coba of [
+      () => tabletA.get(`/v1/tagihan/${terbukaB}`),
+      () => tabletA.get(`/v1/tagihan/${lunasB}`),
+      () => tabletA.post(`/v1/tagihan/${terbukaB}/pesanan`, { item: [{ menuId: menuA }] }),
+      () => tabletA.post(`/v1/tagihan/${terbukaB}/pembayaran`, { metode: 'tunai', diterima: 1_000_000 }),
+    ]) {
+      const res = await coba();
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain('Warung B');
+    }
+
+    // Menu Tenant B tidak bisa dipesan di Tagihan Tenant A, dan ID milik Tenant B yang dipakai ulang
+    // sebagai ID buatan klien ditolak tanpa membocorkan atau mengubah apa pun.
+    const tagihanA = (await tabletA.post('/v1/tagihan', { kanal: 'bawa_pulang' }).expect(201)).body.id;
+    expect((await tabletA.post(`/v1/tagihan/${tagihanA}/pesanan`, { item: [{ menuId: dijualB }] })).status).toBe(404);
+    for (const coba of [
+      () => tabletA.post('/v1/tagihan', { id: terbukaB, kanal: 'bawa_pulang' }),
+      () => tabletA.post(`/v1/tagihan/${tagihanA}/pesanan`, { id: pesananB.id, item: [{ menuId: menuA }] }),
+      () => tabletA.post(`/v1/tagihan/${tagihanA}/pesanan`, { item: [{ id: pesananB.item[0].id, menuId: menuA }] }),
+    ]) {
+      const res = await coba();
+      expect([res.status, res.body.kode]).toEqual([409, 'id_dipakai']);
+      expect(JSON.stringify(res.body)).not.toContain('Warung B');
+    }
+    await tabletA.post(`/v1/tagihan/${tagihanA}/pesanan`, { item: [{ menuId: menuA }] }).expect(201);
+    const bentrok = await tabletA.post(`/v1/tagihan/${tagihanA}/pembayaran`, { id: bayarB.id, metode: 'tunai', diterima: 10_000 });
+    expect([bentrok.status, bentrok.body.kode]).toEqual([409, 'id_dipakai']);
+    expect((await tabletA.get(`/v1/tagihan/${tagihanA}`).expect(200)).body).toMatchObject({ status: 'terbuka', pembayaran: [] });
+    // Nomor Nota per Outlet per Tenant: Tagihan pertama Tenant A tetap bernomor 1.
+    expect((await tabletA.post(`/v1/tagihan/${tagihanA}/pembayaran`, { metode: 'tunai', diterima: 10_000 }).expect(201)).body.tagihan.nomorNota).toBe(1);
+
+    expect(await tagihanB()).toEqual(sebelum);
+  });
+
+  it('Perangkat Terdaftar di Outlet lain dalam Tenant yang sama tidak melihat Tagihan Outlet ini', async () => {
+    const kasirDua = await b.bukaKasir({ outletId: outletKeduaB });
+    await tabletB.masukPin(karyawanB, '1234').expect(200);
+    const tagihanSatu = (await tabletB.post('/v1/tagihan', { kanal: 'bawa_pulang' }).expect(201)).body.id;
+    expect((await kasirDua.get('/v1/tagihan').expect(200)).body).toEqual([]);
+    expect((await kasirDua.get(`/v1/tagihan/${tagihanSatu}`)).status).toBe(404);
+    expect((await kasirDua.post(`/v1/tagihan/${tagihanSatu}/pembayaran`, { metode: 'tunai', diterima: 1 })).status).toBe(404);
+  });
 });
