@@ -78,6 +78,20 @@
       "when": 1794571775867,
       "tag": "0010_rls_meja_metode_bayar_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794588056808,
+      "tag": "0011_penjualan",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794588057694,
+      "tag": "0012_rls_penjualan",
+      "breakpoints": true
     }
   ]
 }

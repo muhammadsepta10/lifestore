@@ -12,6 +12,7 @@ import { MetodeBayarModule } from './pembayaran/metode-bayar.module';
 import { MenuModule } from './menu/menu.module';
 import type { KonfigurasiApi } from './konfigurasi';
 import { PajakModule } from './pajak/pajak.module';
+import { PenjualanModule } from './penjualan/penjualan.module';
 import { ShiftModule } from './shift/shift.module';
 import { JamModule } from './umum/jam';
 import { UsahaModule } from './usaha/usaha.module';
@@ -37,6 +38,7 @@ export class AppModule {
         MetodeBayarModule,
         ShiftModule,
         KasirModule,
+        PenjualanModule,
       ],
     };
   }

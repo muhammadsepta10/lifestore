@@ -1,8 +1,9 @@
 import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sum } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
-import { anggota, kasShift, outlet, pengguna, perangkatTerdaftar, shift } from '../database/schema';
+import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift } from '../database/schema';
+import { JENIS_METODE_BAYAR } from '../pembayaran/metode-bayar.module';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { KaryawanModule } from '../karyawan/karyawan.module';
@@ -45,11 +46,23 @@ async function ringkasKas(tx: TxDb, shiftId: string) {
 }
 
 /**
- * Penjualan per Metode Bayar dan void di Shift. Tiket penjualan (#38) mengisi ini dari Pembayaran;
- * sampai saat itu belum ada penjualan, jadi semuanya nol.
+ * Penjualan per Metode Bayar di Shift, dari Pembayaran yang diterima selama Shift itu
+ * (`jumlah` = banyaknya Pembayaran, `nilai` = rupiah yang melunasi Tagihan, tanpa kembalian).
+ * Void belum ada, jadi masih nol.
  */
-async function penjualanShift(_tx: TxDb, _shiftId: string) {
-  return { penjualanPerMetodeBayar: [] as { jenis: string; jumlah: number; nilai: number }[], penjualanTunai: 0, void: { jumlah: 0, nilai: 0 } };
+async function penjualanShift(tx: TxDb, shiftId: string) {
+  const baris = await tx
+    .select({ jenis: pembayaran.metode, jumlah: count(), nilai: sum(pembayaran.jumlah).mapWith(Number) })
+    .from(pembayaran)
+    .where(eq(pembayaran.shiftId, shiftId))
+    .groupBy(pembayaran.metode);
+  const urutan = (jenis: string) => (JENIS_METODE_BAYAR as readonly string[]).indexOf(jenis);
+  const penjualanPerMetodeBayar = baris.map((b) => ({ jenis: b.jenis, jumlah: b.jumlah, nilai: b.nilai ?? 0 })).sort((a, b) => urutan(a.jenis) - urutan(b.jenis));
+  return {
+    penjualanPerMetodeBayar,
+    penjualanTunai: penjualanPerMetodeBayar.find((x) => x.jenis === 'tunai')?.nilai ?? 0,
+    void: { jumlah: 0, nilai: 0 },
+  };
 }
 
 /** Kas seharusnya di laci: modal awal + penjualan tunai + kas masuk − kas keluar. */
@@ -109,6 +122,20 @@ export async function shiftTerbuka(tx: TxDb, perangkatId: string) {
     .from(shift)
     .where(and(eq(shift.perangkatId, perangkatId), eq(shift.status, 'terbuka')));
   return s ? tampilkanShiftTerbuka(tx, s) : null;
+}
+
+/**
+ * ID Shift terbuka di perangkat ini (atau null), dengan barisnya dikunci bersama (FOR SHARE) sampai
+ * transaksi selesai. Dipakai saat menerima Pembayaran: Tutup Shift menunggu Pembayaran yang sedang
+ * berjalan, sehingga kas seharusnya yang dibekukan selalu memuat semua Pembayaran Shift itu.
+ */
+export async function kunciShiftTerbuka(tx: TxDb, perangkatId: string): Promise<string | null> {
+  const [s] = await tx
+    .select({ id: shift.id })
+    .from(shift)
+    .where(and(eq(shift.perangkatId, perangkatId), eq(shift.status, 'terbuka')))
+    .for('share');
+  return s?.id ?? null;
 }
 
 function shiftSudahTerbuka(id: string): ConflictException {
@@ -219,7 +246,8 @@ export class ShiftKasirController {
     const m = objek(body);
     const hitungButa = rupiah(m, 'hitungButa');
     const tx = this.db.tenant();
-    const s = await this.shiftPerangkat(tx, p, shiftId);
+    // Kunci Shift dulu: Pembayaran yang sedang berjalan selesai sebelum kas seharusnya dihitung.
+    const s = await this.shiftPerangkat(tx, p, shiftId, { kunci: true });
     if (s.status !== 'terbuka') throw shiftDitutup();
     const kasSeharusnya = await hitungKasSeharusnya(tx, s);
     const [ditutup] = await tx
@@ -248,11 +276,12 @@ export class ShiftKasirController {
     return laporanShift(tx, s);
   }
 
-  private async shiftPerangkat(tx: TxDb, p: PerangkatAktif, shiftId: string): Promise<BarisShift> {
-    const [s] = await tx
+  private async shiftPerangkat(tx: TxDb, p: PerangkatAktif, shiftId: string, opsi: { kunci?: boolean } = {}): Promise<BarisShift> {
+    const q = tx
       .select()
       .from(shift)
       .where(and(eq(shift.id, shiftId), eq(shift.perangkatId, p.id)));
+    const [s] = opsi.kunci ? await q.for('update') : await q;
     if (!s) throw tidakDitemukan('Shift');
     return s;
   }

@@ -564,3 +564,201 @@ export const kasShift = pgTable(
   },
   (t) => [index().on(t.tenantId), index().on(t.shiftId)],
 );
+
+// ---------------------------------------------------------------------------
+// Penjualan: Tagihan, Pesanan, Item Pesanan, Pembayaran (#38)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tagihan: satu unit pembayaran, `terbuka → lunas` (dapat Nomor Nota) atau `void`.
+ * Profil Pajak dan Service Charge yang berlaku DISALIN saat Tagihan dibuat, sehingga perubahan
+ * Profil Pajak sesudahnya tidak mengubah Tagihan ini. Angka rincian dibekukan saat ditutup;
+ * selama terbuka selalu dihitung ulang dari Item Pesanan (Hitung Tagihan).
+ */
+export const tagihan = pgTable(
+  'tagihan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    /** Perangkat Terdaftar yang membuka Tagihan. */
+    perangkatId: text()
+      .notNull()
+      .references(() => perangkatTerdaftar.id),
+    kanal: text().$type<'dine_in' | 'bawa_pulang'>().notNull(),
+    /** Meja untuk Tagihan dine-in; null untuk bawa pulang. */
+    mejaId: text().references(() => meja.id),
+    namaPelanggan: text(),
+    status: text().$type<'terbuka' | 'lunas' | 'void'>().notNull().default('terbuka'),
+    dibukaOlehAnggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    dibukaPada: timestamp({ withTimezone: true }).notNull(),
+    // Salinan Profil Pajak saat Tagihan dibuat.
+    pajakJenis: text().$type<'PBJT' | 'PPN' | 'tidak_dipungut'>().notNull(),
+    pajakTarifPersen: numeric({ precision: 5, scale: 2, mode: 'number' }).notNull(),
+    pajakLabel: text().notNull(),
+    hargaTermasukPajak: boolean().notNull(),
+    serviceChargePersen: numeric({ precision: 5, scale: 2, mode: 'number' }).notNull(),
+    serviceChargeKanal: text().array().notNull(),
+    // Diisi saat Tagihan ditutup.
+    nomorNota: integer(),
+    ditutupPada: timestamp({ withTimezone: true }),
+    ditutupOlehAnggotaId: text().references(() => anggota.id),
+    subtotal: bigint({ mode: 'number' }),
+    diskon: bigint({ mode: 'number' }),
+    serviceCharge: bigint({ mode: 'number' }),
+    dasarPajak: bigint({ mode: 'number' }),
+    pajak: bigint({ mode: 'number' }),
+    total: bigint({ mode: 'number' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.outletId, t.status), uniqueIndex().on(t.outletId, t.nomorNota)],
+);
+
+/**
+ * Penghitung nomor berurutan per Outlet. `kunci` = `nota` untuk Nomor Nota, atau
+ * `pesanan:<tanggal>:<awalan>` untuk Nomor Pesanan harian per awalan perangkat.
+ * Dinaikkan di dalam transaksi pemakainya: baris terkunci sampai commit dan kenaikan ikut
+ * batal saat rollback, jadi nomornya berurutan tanpa celah.
+ */
+export const penghitungNomor = pgTable(
+  'penghitung_nomor',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    kunci: text().notNull(),
+    nilai: integer().notNull(),
+  },
+  (t) => [index().on(t.tenantId), uniqueIndex().on(t.outletId, t.kunci)],
+);
+
+/** Pesanan: satu kali kiriman item ke dapur di dalam Tagihan. Append-only. */
+export const pesanan = pgTable(
+  'pesanan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    tagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    perangkatId: text()
+      .notNull()
+      .references(() => perangkatTerdaftar.id),
+    /** Nomor Pesanan harian berawalan perangkat, misal `A-023`. */
+    nomorPesanan: text().notNull(),
+    tanggal: date({ mode: 'string' }).notNull(),
+    dikirimOlehAnggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    dikirimPada: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.tagihanId), uniqueIndex().on(t.outletId, t.tanggal, t.nomorPesanan)],
+);
+
+/**
+ * Item Pesanan: salinan Menu (nama, Varian, harga, pilihan, bebas pajak, Stasiun) saat dikirim.
+ * Append-only dan tidak pernah diubah; status dapurnya ada di `kejadian_item_pesanan`.
+ * `varianId` dan pilihan sengaja tanpa FK: Varian/pilihan bisa dihapus dari Menu.
+ */
+export const itemPesanan = pgTable(
+  'item_pesanan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    tagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    pesananId: text()
+      .notNull()
+      .references(() => pesanan.id),
+    urutan: integer().notNull(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    nama: text().notNull(),
+    varianId: text(),
+    namaVarian: text(),
+    hargaSatuan: bigint({ mode: 'number' }).notNull(),
+    jumlah: integer().notNull(),
+    pilihan: jsonb().$type<{ pilihanId: string; grupPilihanId: string; nama: string; harga: number }[]>().notNull(),
+    bebasPajak: boolean().notNull(),
+    stasiunId: text().references(() => stasiun.id),
+    catatan: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.tagihanId), index().on(t.pesananId)],
+);
+
+/**
+ * Kejadian status Item Pesanan (`menunggu → dimasak → siap → disajikan`, atau `batal`). Append-only.
+ * Status sekarang = kejadian dengan `urutan` terbesar. `urutan` naik terus, jadi tabel ini juga
+ * bisa dibaca sebagai aliran kejadian untuk KDS.
+ */
+export const kejadianItemPesanan = pgTable(
+  'kejadian_item_pesanan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    urutan: bigint({ mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    itemPesananId: text()
+      .notNull()
+      .references(() => itemPesanan.id),
+    status: text().$type<'menunggu' | 'dimasak' | 'siap' | 'disajikan' | 'batal'>().notNull(),
+    anggotaId: text().references(() => anggota.id),
+    perangkatId: text().references(() => perangkatTerdaftar.id),
+    alasan: text(),
+    waste: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.itemPesananId, t.urutan), index().on(t.outletId, t.urutan)],
+);
+
+/**
+ * Pembayaran: satu pelunasan sebagian atau seluruh Tagihan dengan satu Metode Bayar. Append-only.
+ * `jumlah` = nilai yang melunasi Tagihan; `diterima` − `kembalian` = `jumlah` (tunai).
+ * `shiftId` = Shift terbuka di perangkat penerima; wajib untuk tunai.
+ */
+export const pembayaran = pgTable(
+  'pembayaran',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    tagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    shiftId: text().references(() => shift.id),
+    perangkatId: text()
+      .notNull()
+      .references(() => perangkatTerdaftar.id),
+    metode: text().notNull(),
+    jumlah: bigint({ mode: 'number' }).notNull(),
+    diterima: bigint({ mode: 'number' }).notNull(),
+    kembalian: bigint({ mode: 'number' }).notNull(),
+    referensi: text(),
+    anggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    dibayarPada: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.tagihanId), index().on(t.shiftId)],
+);

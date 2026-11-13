@@ -89,6 +89,8 @@ export interface PemilikTes extends PenggunaMasuk {
    * di Outlet itu, perangkat didaftarkan, lalu karyawan masuk dengan PIN.
    */
   bukaKasir(data?: { outletId?: string; peran?: PeranTes; nama?: string; awalan?: string }): Promise<KasirTes>;
+  /** Aktifkan satu Metode Bayar (default tunai) di Outlet (default Outlet pertama). */
+  aktifkanMetodeBayar(jenis?: string, outletId?: string): Promise<void>;
 }
 
 type PeranTes = 'manajer_outlet' | 'kasir' | 'pelayan' | 'dapur';
@@ -99,6 +101,22 @@ export interface KasirTes extends PerangkatTes {
   pin: string;
   /** Buka Shift dengan modal awal laci; mengembalikan ID Shift. */
   bukaShift(kasAwal: number): Promise<string>;
+  /** Buka Tagihan bawa pulang; mengembalikan ID Tagihan. */
+  bukaTagihan(data?: { id?: string; namaPelanggan?: string }): Promise<string>;
+  /** Kirim item sebagai satu Pesanan (tanpa memeriksa status; pakai `.expect(...)`). */
+  kirimPesanan(tagihanId: string, item: ItemPesananTes[], opsi?: { id?: string }): Permintaan;
+  /** Bayar tunai (tanpa memeriksa status; pakai `.expect(...)`). */
+  bayarTunai(tagihanId: string, diterima: number, opsi?: { id?: string }): Permintaan;
+}
+
+/** Satu baris kiriman Pesanan; bentuknya sama dengan `item[]` di `POST /v1/tagihan/:id/pesanan`. */
+export interface ItemPesananTes {
+  id?: string;
+  menuId: string;
+  varianId?: string;
+  pilihanIds?: string[];
+  jumlah?: number;
+  catatan?: string;
 }
 
 export interface DataKaryawan {
@@ -260,7 +278,16 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
             const res = await p.post('/v1/shift', { kasAwal }).expect(201);
             return res.body.id as string;
           },
+          async bukaTagihan(t = {}) {
+            const res = await p.post('/v1/tagihan', { kanal: 'bawa_pulang', ...t }).expect(201);
+            return res.body.id as string;
+          },
+          kirimPesanan: (tagihanId, item, o = {}) => p.post(`/v1/tagihan/${tagihanId}/pesanan`, { ...o, item }),
+          bayarTunai: (tagihanId, diterima, o = {}) => p.post(`/v1/tagihan/${tagihanId}/pembayaran`, { ...o, metode: 'tunai', diterima }),
         };
+      },
+      async aktifkanMetodeBayar(jenis = 'tunai', o = outletId) {
+        await pengguna.put(`/v1/outlet/${o}/metode-bayar/${jenis}`, { aktif: true }).expect(200);
       },
     };
     return pemilik;
