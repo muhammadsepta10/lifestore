@@ -40,6 +40,12 @@ pnpm --filter @lifestore/api exec vitest run test/kesehatan.e2e.test.ts   # satu
 
 Tes `api` butuh server Postgres 16 dengan akses superuser. Default `postgres://postgres@localhost:5432/postgres`; ganti lewat `TEST_DATABASE_URL`. Setiap file tes membuat database baru, menjalankan migrasi sungguhan, dan menyalakan aplikasi NestJS penuh yang terhubung sebagai peran tanpa BYPASSRLS, lalu menghapus database itu di akhir.
 
+UI tidak punya suite tes yang dipelihara. Sebelum deploy, jalankan skrip Playwright manual alur kasir (buka Shift → Tagihan bawa pulang → Pesanan → bayar tunai → struk → Laporan Shift) di browser sungguhan:
+
+```bash
+PW_CHANNEL=chrome bash scripts/manual/jalankan-alur-kasir.sh   # butuh paket `playwright` (global boleh)
+```
+
 Menulis tes API baru:
 
 ```ts

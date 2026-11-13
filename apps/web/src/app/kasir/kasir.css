@@ -630,6 +630,9 @@
 }
 
 /* ---------- Penjualan: kartu Tagihan, baris Pesanan, pilihan Menu ---------- */
+.ostrip form .addcard {
+  padding: 0 16px;
+}
 .ostrip form {
   display: flex;
   flex: none;
