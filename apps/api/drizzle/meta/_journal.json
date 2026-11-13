@@ -36,6 +36,20 @@
       "when": 1794570045595,
       "tag": "0004_rls_identitas_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794570943697,
+      "tag": "0005_karyawan_perangkat",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794570944342,
+      "tag": "0006_rls_karyawan_perangkat",
+      "breakpoints": true
     }
   ]
 }

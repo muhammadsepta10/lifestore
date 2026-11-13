@@ -4,9 +4,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
 import { EmailModule } from './email/email.module';
 import { IdentitasModule } from './identitas/identitas.module';
+import { KaryawanModule } from './karyawan/karyawan.module';
 import { KesehatanModule } from './kesehatan/kesehatan.module';
 import type { KonfigurasiApi } from './konfigurasi';
 import { PajakModule } from './pajak/pajak.module';
+import { JamModule } from './umum/jam';
 import { UsahaModule } from './usaha/usaha.module';
 
 @Module({})
@@ -16,6 +18,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         DatabaseModule.register(konfigurasi),
+        JamModule,
         EmailModule,
         AuditModule,
         KesehatanModule,
@@ -23,6 +26,7 @@ export class AppModule {
         UsahaModule,
         PajakModule,
         DashboardModule,
+        KaryawanModule,
       ],
     };
   }

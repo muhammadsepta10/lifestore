@@ -5,6 +5,7 @@ import { type JamBukaHari, merek, outlet } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { buatProfilPajakDefault } from '../pajak/pajak.module';
 import { objek, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { PerluIzin } from '../izin/izin';
 
 type BarisOutlet = typeof outlet.$inferSelect;
 
@@ -39,6 +40,7 @@ export class MerekController {
   constructor(private readonly db: Database) {}
 
   @Get()
+  @PerluIzin('outlet.lihat')
   async daftar() {
     return this.db
       .tenant()
@@ -48,6 +50,7 @@ export class MerekController {
   }
 
   @Patch(':id')
+  @PerluIzin('merek.ubah')
   async ubah(@Param('id') id: string, @Body() body: unknown) {
     const nama = teks(objek(body), 'nama', { maks: 100 });
     const [m] = await this.db
@@ -67,12 +70,14 @@ export class OutletController {
   constructor(private readonly db: Database) {}
 
   @Get()
+  @PerluIzin('outlet.lihat')
   async daftar() {
     const baris = await this.db.tenant().select().from(outlet).orderBy(asc(outlet.createdAt), asc(outlet.id));
     return baris.map(tampilkanOutlet);
   }
 
   @Get(':id')
+  @PerluIzin('outlet.lihat', { outletParam: 'id' })
   async detail(@Param('id') id: string) {
     const [o] = await this.db.tenant().select().from(outlet).where(eq(outlet.id, id));
     if (!o) throw tidakDitemukan('Outlet');
@@ -82,6 +87,7 @@ export class OutletController {
   /** Tambah Outlet. Tanpa `merekId`, Outlet masuk ke Merek default. */
   @Post()
   @HttpCode(201)
+  @PerluIzin('outlet.tambah')
   async tambah(@Body() body: unknown) {
     const m = objek(body);
     const nama = teks(m, 'nama', { maks: 100 });
@@ -102,6 +108,7 @@ export class OutletController {
 
   /** Ubah profil Outlet: nama, alamat, kota, jam buka, logo. */
   @Patch(':id')
+  @PerluIzin('outlet.ubah', { outletParam: 'id' })
   async ubah(@Param('id') id: string, @Body() body: unknown) {
     const m = objek(body);
     const perubahan: Partial<typeof outlet.$inferInsert> = {};

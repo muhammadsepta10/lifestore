@@ -3,6 +3,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { Database } from '../database/database';
 import { logAudit, pengguna } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
+import { PerluIzin } from '../izin/izin';
 
 /** Siapa yang melakukan aksi. Sesi dashboard mengisi `penggunaId`; kasir nanti juga `perangkatId`. */
 export interface Pelaku {
@@ -61,6 +62,7 @@ export class LogAuditController {
   constructor(private readonly db: Database) {}
 
   @Get()
+  @PerluIzin('log_audit.lihat')
   async daftar() {
     const baris = await this.db
       .tenant()

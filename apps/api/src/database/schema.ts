@@ -10,7 +10,7 @@
  * - Setiap tabel milik Tenant: kolom `tenant_id` + RLS dipaksa + kebijakan `tenant_id = app_tenant_id()`.
  */
 import { sql } from 'drizzle-orm';
-import { boolean, date, index, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 const id = () =>
   text()
@@ -94,18 +94,25 @@ export const sesi = pgTable('sesi', {
 // ---------------------------------------------------------------------------
 
 /**
- * Anggota: keterlibatan Pengguna di satu Tenant. Selain kebijakan Tenant, Pengguna boleh
+ * Anggota: keterlibatan seseorang di satu Tenant. Selain kebijakan Tenant, Pengguna boleh
  * MEMBACA baris Anggota miliknya sendiri (`app.pengguna_id`) untuk memilih Tenant setelah masuk.
+ *
+ * - `peran`: `pemilik` (semua izin di semua Outlet) atau `karyawan` (izin dari Peran di Penugasan).
+ * - `penggunaId` kosong untuk karyawan khusus PIN, atau karyawan yang undangannya belum diterima.
+ * - PIN disimpan sebagai hash; `pinSalah` dan `pinTerkunciSampai` mengatur kunci sementara.
  */
 export const anggota = pgTable(
   'anggota',
   {
     id: id(),
     tenantId: tenantId(),
-    penggunaId: text()
-      .notNull()
-      .references(() => pengguna.id),
+    penggunaId: text().references(() => pengguna.id),
     peran: text().notNull(),
+    nama: text(),
+    hashPin: text(),
+    pinSalah: integer().notNull().default(0),
+    pinTerkunciSampai: timestamp({ withTimezone: true }),
+    aktif: boolean().notNull().default(true),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex().on(t.tenantId, t.penggunaId), index().on(t.penggunaId)],
@@ -198,3 +205,80 @@ export const siapJualanDilewati = pgTable(
   },
   (t) => [uniqueIndex().on(t.outletId, t.langkah), index().on(t.tenantId)],
 );
+
+/** Undangan karyawan lewat email. Token (hash) sekali pakai; diterima = Anggota terhubung ke Pengguna. */
+export const undanganKaryawan = pgTable(
+  'undangan_karyawan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    anggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    email: text().notNull(),
+    hashToken: text().notNull().unique(),
+    kedaluwarsaPada: timestamp({ withTimezone: true }).notNull(),
+    diterimaPada: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.anggotaId)],
+);
+
+/** Penugasan: Anggota boleh bekerja di Outlet ini dengan Peran bawaan ini. */
+export const penugasan = pgTable(
+  'penugasan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    anggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    peran: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.anggotaId, t.outletId), index().on(t.tenantId), index().on(t.outletId)],
+);
+
+/**
+ * Perangkat Terdaftar milik Outlet. `hashToken` terisi setelah kode pendaftaran dipakai;
+ * `dicabutPada` mematikan token. `anggotaAktifId` = Anggota yang sedang masuk dengan PIN.
+ * Awalan Nomor Pesanan unik per Outlet di antara perangkat yang belum dicabut.
+ */
+export const perangkatTerdaftar = pgTable(
+  'perangkat_terdaftar',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    nama: text().notNull(),
+    awalan: text().notNull(),
+    hashToken: text().unique(),
+    terdaftarPada: timestamp({ withTimezone: true }),
+    dicabutPada: timestamp({ withTimezone: true }),
+    anggotaAktifId: text().references(() => anggota.id),
+    anggotaMasukPada: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index().on(t.tenantId),
+    uniqueIndex('perangkat_terdaftar_awalan_aktif').on(t.outletId, t.awalan).where(sql`dicabut_pada IS NULL`),
+  ],
+);
+
+/**
+ * Kode pendaftaran Perangkat Terdaftar (tabel global, hash saja). Perangkat baru belum punya
+ * konteks Tenant, jadi kode dicari di sini lalu dihapus saat dipakai (sekali pakai).
+ * `perangkatTenantId` sengaja tidak bernama `tenant_id` (tabel global, tanpa RLS).
+ */
+export const kodePendaftaranPerangkat = pgTable('kode_pendaftaran_perangkat', {
+  hashKode: text().primaryKey(),
+  perangkatTenantId: text().notNull(),
+  perangkatId: text().notNull(),
+  kedaluwarsaPada: timestamp({ withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+});
