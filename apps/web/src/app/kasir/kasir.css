@@ -629,6 +629,193 @@
   font-weight: 800;
 }
 
+/* ---------- Penjualan: kartu Tagihan, baris Pesanan, pilihan Menu ---------- */
+.ostrip form {
+  display: flex;
+  flex: none;
+}
+.ocard {
+  flex: 0 0 218px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  text-decoration: none;
+  min-height: 84px;
+}
+.ocard[aria-current='true'] {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    var(--shadow);
+}
+.ocard small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.ocard-h,
+.ocard-f {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ocard-f b {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+button.mcard {
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+button.mcard:disabled {
+  cursor: not-allowed;
+}
+button.mcard.habis .mbody {
+  opacity: 0.55;
+}
+button.mcard:not(:disabled):active {
+  transform: scale(0.98);
+}
+.olines {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  min-height: 60px;
+  max-height: 44vh;
+}
+.ogroup-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.oline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.oline:last-child {
+  border-bottom: 0;
+}
+.oline.batal .oname,
+.oline.batal .oprice {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.oqty {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+}
+.oname {
+  display: grid;
+  min-width: 0;
+}
+.oname small {
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.oprice {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ostatus {
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+.ostep {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ostep button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ostep button.inc {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.angka-jumlah {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.opsi {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.opsi legend {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.opsi label {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.opsi label:has(input:checked) {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--accent-soft);
+}
+.opsi input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.opsi .harga {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 14px;
+}
+.baris-jumlah {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cepat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.struk {
+  display: grid;
+  gap: 12px;
+}
+
 /* ---------- Modal ---------- */
 .scrim {
   position: fixed;

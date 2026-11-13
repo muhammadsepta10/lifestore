@@ -98,3 +98,55 @@ export async function ubahMeja(form: FormData) {
   await panggilApi(`/v1/kasir/meja/${mejaId}/${aksi}`, { method: 'POST', perangkat: true });
   redirect('/kasir');
 }
+
+// ---------------------------------------------------------------------------
+// Penjualan: Tagihan, Pesanan, Pembayaran
+// ---------------------------------------------------------------------------
+
+/** Buka Tagihan bawa pulang lalu pilih Tagihan itu. `id` dari formulir membuat kirim ulang aman. */
+export async function bukaTagihan(form: FormData) {
+  const res = await panggilApi<{ id: string }>('/v1/tagihan', {
+    method: 'POST',
+    perangkat: true,
+    body: { id: teks(form, 'id'), kanal: 'bawa_pulang', namaPelanggan: teks(form, 'namaPelanggan') || undefined },
+  });
+  if (!res.ok) redirect('/kasir?galat=tagihan');
+  redirect(`/kasir?tagihan=${encodeURIComponent(res.body.id)}`);
+}
+
+export interface ItemKiriman {
+  menuId: string;
+  varianId?: string;
+  pilihanIds: string[];
+  jumlah: number;
+  catatan?: string;
+}
+
+export type HasilPerintah = { ok: true } | { ok: false; kode: string };
+
+function hasil(res: { ok: boolean; body: unknown }): HasilPerintah {
+  return res.ok ? { ok: true } : { ok: false, kode: (res.body as Galat | null)?.kode ?? 'gagal' };
+}
+
+/**
+ * Kirim keranjang sebagai satu Pesanan. `id` dibuat di perangkat dan dipakai lagi saat mencoba
+ * ulang, sehingga Pesanan tidak pernah tergandakan. Harga tidak dikirim: API menyalinnya dari Menu.
+ */
+export async function kirimPesanan(tagihanId: string, id: string, item: ItemKiriman[]): Promise<HasilPerintah> {
+  try {
+    return hasil(await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/pesanan`, { method: 'POST', perangkat: true, body: { id, item } }));
+  } catch {
+    return { ok: false, kode: 'gagal' };
+  }
+}
+
+/** Terima Pembayaran tunai. Hanya uang yang diterima yang dikirim; total dihitung ulang di API. */
+export async function bayarTunai(tagihanId: string, id: string, diterima: number): Promise<HasilPerintah> {
+  try {
+    return hasil(
+      await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/pembayaran`, { method: 'POST', perangkat: true, body: { id, metode: 'tunai', diterima } }),
+    );
+  } catch {
+    return { ok: false, kode: 'gagal' };
+  }
+}

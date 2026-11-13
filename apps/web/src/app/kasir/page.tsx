@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { t } from '../../i18n/id';
 import { COOKIE_PERANGKAT, panggilApi } from '../../lib/api';
-import { bukaShift, catatKas, daftarPerangkat, keluarKasir, lupakanPerangkat, masukPin, tutupShift, ubahMeja } from './aksi';
+import { bukaShift, bukaTagihan, catatKas, daftarPerangkat, keluarKasir, lupakanPerangkat, masukPin, tutupShift, ubahMeja } from './aksi';
 import { Ikon, type NamaIkon } from './ikon';
 import { TombolCetak, TombolTema } from './klien';
+import { GridMenu, PanelPesanan, PenyediaPos } from './pos';
+import type { DaftarJual, TagihanLengkap, TagihanTerbuka } from './tipe';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,11 +47,6 @@ interface Meja {
   status: string;
 }
 
-interface DaftarJual {
-  kategori: { id: string; nama: string; warna: string; ikon: string | null }[];
-  menu: { id: string; kategoriId: string; nama: string; harga: number; habis: boolean; varian: unknown[] }[];
-}
-
 interface LaporanShift {
   id: string;
   dibukaOleh: { nama: string };
@@ -68,10 +65,12 @@ interface LaporanShift {
   kas: { id: string; jenis: string; jumlah: number; alasan: string }[];
 }
 
-type Cari = { galat?: string; modal?: string; laporan?: string; kategori?: string; info?: string };
+type Cari = { galat?: string; modal?: string; laporan?: string; kategori?: string; info?: string; tagihan?: string; struk?: string };
 
 const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const jam = (iso: string) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).format(new Date(iso));
+const tanggalJam = (iso: string) =>
+  new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(iso));
 const inisial = (nama: string) =>
   nama
     .split(/\s+/)
@@ -101,9 +100,14 @@ export default async function HalamanKasir({ searchParams }: { searchParams: Pro
   if (kasir.status === 401) redirect('/kasir');
   if (kasir.status === 403) return <LayarTidakBerizin k={k} />;
   if (!kasir.ok) throw new Error(`Gagal memuat kasir (${kasir.status})`);
-  const [meja, jual] = await Promise.all([
+  const detailTagihan = (id: string | undefined) =>
+    id ? panggilApi<TagihanLengkap>(`/v1/tagihan/${encodeURIComponent(id)}`, { perangkat: true }) : Promise.resolve(undefined);
+  const [meja, jual, terbuka, dipilih, struk] = await Promise.all([
     panggilApi<Meja[]>('/v1/kasir/meja', { perangkat: true }),
     panggilApi<DaftarJual>('/v1/kasir/menu', { perangkat: true }),
+    panggilApi<TagihanTerbuka[]>('/v1/tagihan', { perangkat: true }),
+    detailTagihan(cari.tagihan),
+    detailTagihan(cari.struk),
   ]);
   const laporan = cari.laporan
     ? await panggilApi<LaporanShift>(`/v1/shift/${encodeURIComponent(cari.laporan)}/laporan`, { perangkat: true })
@@ -117,6 +121,9 @@ export default async function HalamanKasir({ searchParams }: { searchParams: Pro
       jual={jual.ok ? jual.body : { kategori: [], menu: [] }}
       cari={cari}
       laporan={laporan?.ok ? laporan.body : undefined}
+      terbuka={terbuka.ok ? terbuka.body : []}
+      tagihan={dipilih?.ok && dipilih.body.status === 'terbuka' ? dipilih.body : null}
+      struk={struk?.ok && struk.body.status === 'lunas' ? struk.body : undefined}
     />
   );
 }
@@ -313,6 +320,9 @@ function LayarKasirB({
   jual,
   cari,
   laporan,
+  terbuka,
+  tagihan,
+  struk,
 }: {
   k: Kamus;
   d: LayarKasir;
@@ -320,16 +330,29 @@ function LayarKasirB({
   jual: DaftarJual;
   cari: Cari;
   laporan?: LaporanShift;
+  terbuka: TagihanTerbuka[];
+  tagihan: TagihanLengkap | null;
+  struk?: TagihanLengkap;
 }) {
   const bolehNonaktifkanMeja = d.izin.includes('meja.nonaktifkan');
   const kategoriAktif = jual.kategori.find((x) => x.id === cari.kategori);
   const menuTampil = kategoriAktif ? jual.menu.filter((m) => m.kategoriId === kategoriAktif.id) : jual.menu;
-  const warnaKategori = new Map(jual.kategori.map((x) => [x.id, x]));
+  /** Tautan di dalam layar kasir yang mempertahankan Tagihan terpilih. */
+  const ke = (q: { kategori?: string; tagihan?: string | null }) => {
+    const param = new URLSearchParams();
+    const idTagihan = q.tagihan === undefined ? tagihan?.id : q.tagihan;
+    if (idTagihan) param.set('tagihan', idTagihan);
+    const kategori = 'kategori' in q ? q.kategori : kategoriAktif?.id;
+    if (kategori) param.set('kategori', kategori);
+    const teks = param.toString();
+    return teks ? `/kasir?${teks}` : '/kasir';
+  };
 
   return (
     <main className="kasir">
       <div className="shell">
         <Sidebar k={k} d={d} />
+        <PenyediaPos key={tagihan?.id ?? 'tanpa-tagihan'} tagihan={tagihan}>
         <div className="vb">
           <header className="top">
             <div className="sapa">
@@ -372,6 +395,11 @@ function LayarKasirB({
                 {k.shift.sudahTerbuka}
               </p>
             ) : null}
+            {cari.galat === 'tagihan' ? (
+              <p className="pesan galat" role="alert">
+                {k.pos.tagihanGagal}
+              </p>
+            ) : null}
             {cari.info === 'tersimpan' ? (
               <p className="pesan info" role="status">
                 {k.shift.tersimpan}
@@ -382,13 +410,30 @@ function LayarKasirB({
             <section>
               <div className="sec-h">
                 <h2>{k.tagihanTerbuka}</h2>
-                <small>0</small>
+                <small>{terbuka.length}</small>
               </div>
               <div className="ostrip">
-                <button className="addcard" type="button" disabled title={k.segeraHadir}>
-                  + {k.tagihanBaru}
-                </button>
-                <p className="kosong">{k.belumAdaTagihan}</p>
+                <form action={bukaTagihan}>
+                  {/* ID buatan klien: kirim ulang formulir yang sama tidak membuka Tagihan kedua. */}
+                  <input type="hidden" name="id" value={crypto.randomUUID()} />
+                  <button className="addcard" type="submit">
+                    + {k.pos.tagihanBaruBawaPulang}
+                  </button>
+                </form>
+                {terbuka.length === 0 ? <p className="kosong">{k.belumAdaTagihan}</p> : null}
+                {terbuka.map((x) => (
+                  <Link key={x.id} className="ocard" href={ke({ tagihan: x.id })} aria-current={tagihan?.id === x.id ? 'true' : undefined} data-tagihan={x.id}>
+                    <span className="ocard-h">
+                      <b>{x.namaPelanggan ?? k.pos.tanpaNama}</b>
+                      <span className="pil info">{k.jenis[x.kanal]}</span>
+                    </span>
+                    <small>{x.nomorPesanan.length > 0 ? x.nomorPesanan.join(' · ') : k.pos.belumAdaPesanan}</small>
+                    <span className="ocard-f">
+                      <small>{k.pos.jumlahItem(x.jumlahItem)}</small>
+                      <b>{rp(x.total)}</b>
+                    </span>
+                  </Link>
+                ))}
               </div>
             </section>
 
@@ -397,7 +442,7 @@ function LayarKasirB({
                 <h2>{k.kategori}</h2>
               </div>
               <div className="ctiles" role="group" aria-label={k.kategori}>
-                <Link className={`ctile${kategoriAktif ? '' : ' aktif'}`} href="/kasir" style={tint('sand')} aria-current={kategoriAktif ? undefined : 'true'}>
+                <Link className={`ctile${kategoriAktif ? '' : ' aktif'}`} href={ke({ kategori: undefined })} style={tint('sand')} aria-current={kategoriAktif ? undefined : 'true'}>
                   <span className="cemo">🍽️</span>
                   <b>{k.semuaMenu}</b>
                   <small>{k.jumlahMenu(jual.menu.length)}</small>
@@ -406,7 +451,7 @@ function LayarKasirB({
                   <Link
                     key={x.id}
                     className={`ctile${kategoriAktif?.id === x.id ? ' aktif' : ''}`}
-                    href={`/kasir?kategori=${encodeURIComponent(x.id)}`}
+                    href={ke({ kategori: x.id })}
                     style={tint(x.warna)}
                     aria-current={kategoriAktif?.id === x.id ? 'true' : undefined}
                   >
@@ -426,24 +471,7 @@ function LayarKasirB({
               {menuTampil.length === 0 ? (
                 <p className="muted">{k.menuKosong}</p>
               ) : (
-                <div className="mgrid">
-                  {menuTampil.map((m) => {
-                    const kat = warnaKategori.get(m.kategoriId);
-                    return (
-                      <article key={m.id} className={`mcard${m.habis ? ' habis' : ''}`} style={tint(kat?.warna ?? 'sand')}>
-                        <span className="mvis">
-                          <span aria-hidden="true">{kat?.ikon ?? '🍴'}</span>
-                          {m.habis ? <span className="pil danger">{k.habis}</span> : null}
-                        </span>
-                        <span className="mbody">
-                          <b>{m.nama}</b>
-                          <span className="harga">{rp(m.harga)}</span>
-                          <small>{kat?.nama}</small>
-                        </span>
-                      </article>
-                    );
-                  })}
-                </div>
+                <GridMenu menu={menuTampil} kategori={jual.kategori} />
               )}
             </section>
 
@@ -481,59 +509,16 @@ function LayarKasirB({
             </section>
           </div>
 
-          <aside className="order kartu" aria-label={k.pesananSaatIni}>
-            <div className="ohead">
-              <div>
-                <h3>{k.pesananSaatIni}</h3>
-                <small>{k.belumDipilih}</small>
-              </div>
-            </div>
-            <div className="seg" aria-hidden="true">
-              <span className="aktif">{k.jenis.dine_in}</span>
-              <span>{k.jenis.bawa_pulang}</span>
-            </div>
-            <div className="kosong-besar">
-              <span className="besar">🧾</span>
-              <b>{k.belumDipilih}</b>
-              <span>{k.segeraHadir}</span>
-            </div>
-            <div>
-              <div className="sec-h">
-                <h2>{k.metodeBayar}</h2>
-              </div>
-              {d.metodeBayar.length === 0 ? (
-                <p className="muted" style={{ fontSize: 14 }}>
-                  {k.metodeBayarKosong}
-                </p>
-              ) : (
-                <div className="metode">
-                  {d.metodeBayar.map((m) => (
-                    <span key={m.jenis} className="pil redup" title={m.keterangan ?? undefined}>
-                      {k.namaMetodeBayar[m.jenis] ?? m.nama}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="osum">
-              <span>Subtotal</span>
-              <span>{rp(0)}</span>
-            </div>
-            <div className="ototal">
-              <span>Total</span>
-              <b>{rp(0)}</b>
-            </div>
-            <button className="tombol besar lebar" type="button" disabled>
-              {k.bayar} {rp(0)}
-            </button>
-          </aside>
+          <PanelPesanan adaShift={d.shift !== null} tunaiAktif={d.metodeBayar.some((m) => m.jenis === 'tunai')} />
         </div>
+        </PenyediaPos>
       </div>
 
       {cari.modal === 'buka-shift' && !d.shift ? <ModalBukaShift k={k} galat={cari.galat === 'shift'} /> : null}
       {cari.modal === 'kas' && d.shift ? <ModalKas k={k} shift={d.shift} galat={cari.galat === 'shift'} /> : null}
       {cari.modal === 'tutup-shift' && d.shift ? <ModalTutupShift k={k} shift={d.shift} galat={cari.galat === 'shift'} /> : null}
       {laporan ? <ModalLaporan k={k} l={laporan} /> : null}
+      {struk ? <ModalStruk k={k} outlet={d.outlet.nama} s={struk} /> : null}
     </main>
   );
 }
@@ -706,6 +691,73 @@ function ModalLaporan({ k, l }: { k: Kamus; l: LaporanShift }) {
         <TombolCetak label={k.laporan.cetak} />
         <Link className="tombol" href="/kasir">
           {k.laporan.selesai}
+        </Link>
+      </div>
+    </Modal>
+  );
+}
+
+/** Struk Tagihan lunas, dicetak lewat dialog cetak browser. */
+function ModalStruk({ k, outlet, s }: { k: Kamus; outlet: string; s: TagihanLengkap }) {
+  const p = k.pos;
+  const item = s.pesanan.flatMap((x) => x.item).filter((i) => i.status !== 'batal');
+  const tunai = s.pembayaran.reduce((n, b) => n + b.diterima, 0);
+  const kembalian = s.pembayaran.reduce((n, b) => n + b.kembalian, 0);
+  const labelPajak = s.profilPajak.hargaTermasukPajak ? p.pajakTermasuk(s.profilPajak.labelStruk) : s.profilPajak.labelStruk;
+  return (
+    <Modal judul={outlet} sub={`${p.struk.nota(s.nomorNota ?? 0)} · ${s.ditutupPada ? tanggalJam(s.ditutupPada) : ''}`} emoji="🧾">
+      <div className="struk" data-struk={s.id} data-nomor-nota={s.nomorNota}>
+        <p className="muted">
+          {k.jenis[s.kanal]}
+          {s.namaPelanggan ? ` · ${s.namaPelanggan}` : ''} · {s.pesanan.map((x) => x.nomorPesanan).join(' · ')}
+        </p>
+        <ul className="catatan-kas">
+          {item.map((i) => (
+            <li key={i.id}>
+              <span>
+                {i.jumlah}× {i.nama}
+                {[i.namaVarian, ...i.pilihan.map((x) => x.nama)].filter(Boolean).length > 0 ? (
+                  <small className="muted"> · {[i.namaVarian, ...i.pilihan.map((x) => x.nama)].filter(Boolean).join(' · ')}</small>
+                ) : null}
+              </span>
+              <span>{rp((i.hargaSatuan + i.pilihan.reduce((n, x) => n + x.harga, 0)) * i.jumlah)}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="totals">
+          <span className="muted">{p.subtotal}</span>
+          <span>{rp(s.rincian.subtotal)}</span>
+          {s.rincian.serviceCharge > 0 ? (
+            <>
+              <span className="muted">{p.serviceCharge}</span>
+              <span>{rp(s.rincian.serviceCharge)}</span>
+            </>
+          ) : null}
+          {s.profilPajak.jenis !== 'tidak_dipungut' ? (
+            <>
+              <span className="muted">
+                {labelPajak} {s.profilPajak.tarifPersen}%
+              </span>
+              <span>{rp(s.rincian.pajak)}</span>
+            </>
+          ) : null}
+          <span className="grand">{p.total}</span>
+          <span className="grand" data-total>
+            {rp(s.rincian.total)}
+          </span>
+          <span className="muted">{p.struk.tunai}</span>
+          <span>{rp(tunai)}</span>
+          <span className="muted">{p.struk.kembalian}</span>
+          <span data-kembalian>{rp(kembalian)}</span>
+        </div>
+        <p className="muted" style={{ textAlign: 'center' }}>
+          {p.struk.terimaKasih}
+        </p>
+      </div>
+      <div className="baris">
+        <TombolCetak label={p.struk.cetak} />
+        <Link className="tombol" href="/kasir">
+          {p.struk.selesai}
         </Link>
       </div>
     </Modal>
