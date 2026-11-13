@@ -1,6 +1,6 @@
 {
-  "id": "d2084e21-3eec-471a-befe-39d41ad6667e",
-  "prevId": "7b3ec327-5fae-4d47-a816-b36ba1cd4b3b",
+  "id": "89522045-4358-45bd-aa0a-68a565d016bc",
+  "prevId": "60d56618-ab84-4822-b150-2f0b3ea2b062",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -25,13 +25,45 @@
           "name": "pengguna_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "peran": {
           "name": "peran",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hash_pin": {
+          "name": "hash_pin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pin_salah": {
+          "name": "pin_salah",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pin_terkunci_sampai": {
+          "name": "pin_terkunci_sampai",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aktif": {
+          "name": "aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -113,167 +145,31 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.grup_pilihan": {
-      "name": "grup_pilihan",
+    "public.kode_pendaftaran_perangkat": {
+      "name": "kode_pendaftaran_perangkat",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
+        "hash_kode": {
+          "name": "hash_kode",
           "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
+          "notNull": true
         },
-        "tenant_id": {
-          "name": "tenant_id",
+        "perangkat_tenant_id": {
+          "name": "perangkat_tenant_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "menu_id": {
-          "name": "menu_id",
+        "perangkat_id": {
+          "name": "perangkat_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "nama": {
-          "name": "nama",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "minimum": {
-          "name": "minimum",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "maksimum": {
-          "name": "maksimum",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
+        "kedaluwarsa_pada": {
+          "name": "kedaluwarsa_pada",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "grup_pilihan_tenant_id_index": {
-          "name": "grup_pilihan_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "grup_pilihan_menu_id_index": {
-          "name": "grup_pilihan_menu_id_index",
-          "columns": [
-            {
-              "expression": "menu_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "grup_pilihan_tenant_id_tenant_id_fk": {
-          "name": "grup_pilihan_tenant_id_tenant_id_fk",
-          "tableFrom": "grup_pilihan",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "grup_pilihan_menu_id_menu_id_fk": {
-          "name": "grup_pilihan_menu_id_menu_id_fk",
-          "tableFrom": "grup_pilihan",
-          "columnsFrom": [
-            "menu_id"
-          ],
-          "tableTo": "menu",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.harga_outlet": {
-      "name": "harga_outlet",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "menu_id": {
-          "name": "menu_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "varian_id": {
-          "name": "varian_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "outlet_id": {
-          "name": "outlet_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "harga": {
-          "name": "harga",
-          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -285,215 +181,8 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "harga_outlet_tenant_id_index": {
-          "name": "harga_outlet_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "harga_outlet_tenant_id_tenant_id_fk": {
-          "name": "harga_outlet_tenant_id_tenant_id_fk",
-          "tableFrom": "harga_outlet",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "harga_outlet_menu_id_menu_id_fk": {
-          "name": "harga_outlet_menu_id_menu_id_fk",
-          "tableFrom": "harga_outlet",
-          "columnsFrom": [
-            "menu_id"
-          ],
-          "tableTo": "menu",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "harga_outlet_varian_id_varian_id_fk": {
-          "name": "harga_outlet_varian_id_varian_id_fk",
-          "tableFrom": "harga_outlet",
-          "columnsFrom": [
-            "varian_id"
-          ],
-          "tableTo": "varian",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "harga_outlet_outlet_id_outlet_id_fk": {
-          "name": "harga_outlet_outlet_id_outlet_id_fk",
-          "tableFrom": "harga_outlet",
-          "columnsFrom": [
-            "outlet_id"
-          ],
-          "tableTo": "outlet",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "harga_outlet_outletId_menuId_varianId_unique": {
-          "name": "harga_outlet_outletId_menuId_varianId_unique",
-          "columns": [
-            "outlet_id",
-            "menu_id",
-            "varian_id"
-          ],
-          "nullsNotDistinct": true
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.kategori": {
-      "name": "kategori",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "merek_id": {
-          "name": "merek_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "nama": {
-          "name": "nama",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "warna": {
-          "name": "warna",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ikon": {
-          "name": "ikon",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "gambar_url": {
-          "name": "gambar_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "kategori_tenant_id_index": {
-          "name": "kategori_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "kategori_merek_id_index": {
-          "name": "kategori_merek_id_index",
-          "columns": [
-            {
-              "expression": "merek_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "kategori_tenant_id_tenant_id_fk": {
-          "name": "kategori_tenant_id_tenant_id_fk",
-          "tableFrom": "kategori",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "kategori_merek_id_merek_id_fk": {
-          "name": "kategori_merek_id_merek_id_fk",
-          "tableFrom": "kategori",
-          "columnsFrom": [
-            "merek_id"
-          ],
-          "tableTo": "merek",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -616,460 +305,6 @@
             "tenant_id"
           ],
           "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.menu": {
-      "name": "menu",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "merek_id": {
-          "name": "merek_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kategori_id": {
-          "name": "kategori_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "nama": {
-          "name": "nama",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "harga": {
-          "name": "harga",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "deskripsi": {
-          "name": "deskripsi",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "foto_url": {
-          "name": "foto_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "aktif": {
-          "name": "aktif",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "bebas_pajak": {
-          "name": "bebas_pajak",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "menu_tenant_id_index": {
-          "name": "menu_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "menu_merek_id_index": {
-          "name": "menu_merek_id_index",
-          "columns": [
-            {
-              "expression": "merek_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "menu_kategori_id_index": {
-          "name": "menu_kategori_id_index",
-          "columns": [
-            {
-              "expression": "kategori_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "menu_tenant_id_tenant_id_fk": {
-          "name": "menu_tenant_id_tenant_id_fk",
-          "tableFrom": "menu",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_merek_id_merek_id_fk": {
-          "name": "menu_merek_id_merek_id_fk",
-          "tableFrom": "menu",
-          "columnsFrom": [
-            "merek_id"
-          ],
-          "tableTo": "merek",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_kategori_id_kategori_id_fk": {
-          "name": "menu_kategori_id_kategori_id_fk",
-          "tableFrom": "menu",
-          "columnsFrom": [
-            "kategori_id"
-          ],
-          "tableTo": "kategori",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.menu_habis": {
-      "name": "menu_habis",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "menu_id": {
-          "name": "menu_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "outlet_id": {
-          "name": "outlet_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "menu_habis_outlet_id_menu_id_index": {
-          "name": "menu_habis_outlet_id_menu_id_index",
-          "columns": [
-            {
-              "expression": "outlet_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "menu_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "menu_habis_tenant_id_index": {
-          "name": "menu_habis_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "menu_habis_tenant_id_tenant_id_fk": {
-          "name": "menu_habis_tenant_id_tenant_id_fk",
-          "tableFrom": "menu_habis",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_habis_menu_id_menu_id_fk": {
-          "name": "menu_habis_menu_id_menu_id_fk",
-          "tableFrom": "menu_habis",
-          "columnsFrom": [
-            "menu_id"
-          ],
-          "tableTo": "menu",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_habis_outlet_id_outlet_id_fk": {
-          "name": "menu_habis_outlet_id_outlet_id_fk",
-          "tableFrom": "menu_habis",
-          "columnsFrom": [
-            "outlet_id"
-          ],
-          "tableTo": "outlet",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.menu_stasiun": {
-      "name": "menu_stasiun",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "menu_id": {
-          "name": "menu_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "outlet_id": {
-          "name": "outlet_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stasiun_id": {
-          "name": "stasiun_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "menu_stasiun_menu_id_outlet_id_index": {
-          "name": "menu_stasiun_menu_id_outlet_id_index",
-          "columns": [
-            {
-              "expression": "menu_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "outlet_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "menu_stasiun_tenant_id_index": {
-          "name": "menu_stasiun_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "menu_stasiun_stasiun_id_index": {
-          "name": "menu_stasiun_stasiun_id_index",
-          "columns": [
-            {
-              "expression": "stasiun_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "menu_stasiun_tenant_id_tenant_id_fk": {
-          "name": "menu_stasiun_tenant_id_tenant_id_fk",
-          "tableFrom": "menu_stasiun",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_stasiun_menu_id_menu_id_fk": {
-          "name": "menu_stasiun_menu_id_menu_id_fk",
-          "tableFrom": "menu_stasiun",
-          "columnsFrom": [
-            "menu_id"
-          ],
-          "tableTo": "menu",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_stasiun_outlet_id_outlet_id_fk": {
-          "name": "menu_stasiun_outlet_id_outlet_id_fk",
-          "tableFrom": "menu_stasiun",
-          "columnsFrom": [
-            "outlet_id"
-          ],
-          "tableTo": "outlet",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "menu_stasiun_stasiun_id_stasiun_id_fk": {
-          "name": "menu_stasiun_stasiun_id_stasiun_id_fk",
-          "tableFrom": "menu_stasiun",
-          "columnsFrom": [
-            "stasiun_id"
-          ],
-          "tableTo": "stasiun",
           "columnsTo": [
             "id"
           ],
@@ -1339,8 +574,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.pilihan": {
-      "name": "pilihan",
+    "public.penugasan": {
+      "name": "penugasan",
       "schema": "",
       "columns": {
         "id": {
@@ -1356,30 +591,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "grup_pilihan_id": {
-          "name": "grup_pilihan_id",
+        "anggota_id": {
+          "name": "anggota_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "nama": {
-          "name": "nama",
+        "outlet_id": {
+          "name": "outlet_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "harga": {
-          "name": "harga",
-          "type": "bigint",
+        "peran": {
+          "name": "peran",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -1390,8 +618,29 @@
         }
       },
       "indexes": {
-        "pilihan_tenant_id_index": {
-          "name": "pilihan_tenant_id_index",
+        "penugasan_anggota_id_outlet_id_index": {
+          "name": "penugasan_anggota_id_outlet_id_index",
+          "columns": [
+            {
+              "expression": "anggota_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "penugasan_tenant_id_index": {
+          "name": "penugasan_tenant_id_index",
           "columns": [
             {
               "expression": "tenant_id",
@@ -1405,11 +654,11 @@
           "method": "btree",
           "concurrently": false
         },
-        "pilihan_grup_pilihan_id_index": {
-          "name": "pilihan_grup_pilihan_id_index",
+        "penugasan_outlet_id_index": {
+          "name": "penugasan_outlet_id_index",
           "columns": [
             {
-              "expression": "grup_pilihan_id",
+              "expression": "outlet_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1422,9 +671,9 @@
         }
       },
       "foreignKeys": {
-        "pilihan_tenant_id_tenant_id_fk": {
-          "name": "pilihan_tenant_id_tenant_id_fk",
-          "tableFrom": "pilihan",
+        "penugasan_tenant_id_tenant_id_fk": {
+          "name": "penugasan_tenant_id_tenant_id_fk",
+          "tableFrom": "penugasan",
           "columnsFrom": [
             "tenant_id"
           ],
@@ -1435,13 +684,26 @@
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "pilihan_grup_pilihan_id_grup_pilihan_id_fk": {
-          "name": "pilihan_grup_pilihan_id_grup_pilihan_id_fk",
-          "tableFrom": "pilihan",
+        "penugasan_anggota_id_anggota_id_fk": {
+          "name": "penugasan_anggota_id_anggota_id_fk",
+          "tableFrom": "penugasan",
           "columnsFrom": [
-            "grup_pilihan_id"
+            "anggota_id"
           ],
-          "tableTo": "grup_pilihan",
+          "tableTo": "anggota",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "penugasan_outlet_id_outlet_id_fk": {
+          "name": "penugasan_outlet_id_outlet_id_fk",
+          "tableFrom": "penugasan",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "tableTo": "outlet",
           "columnsTo": [
             "id"
           ],
@@ -1451,6 +713,173 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.perangkat_terdaftar": {
+      "name": "perangkat_terdaftar",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()::text"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outlet_id": {
+          "name": "outlet_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "awalan": {
+          "name": "awalan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash_token": {
+          "name": "hash_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "terdaftar_pada": {
+          "name": "terdaftar_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dicabut_pada": {
+          "name": "dicabut_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "anggota_aktif_id": {
+          "name": "anggota_aktif_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "anggota_masuk_pada": {
+          "name": "anggota_masuk_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "perangkat_terdaftar_tenant_id_index": {
+          "name": "perangkat_terdaftar_tenant_id_index",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "perangkat_terdaftar_awalan_aktif": {
+          "name": "perangkat_terdaftar_awalan_aktif",
+          "columns": [
+            {
+              "expression": "outlet_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "awalan",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "dicabut_pada IS NULL",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "perangkat_terdaftar_tenant_id_tenant_id_fk": {
+          "name": "perangkat_terdaftar_tenant_id_tenant_id_fk",
+          "tableFrom": "perangkat_terdaftar",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "perangkat_terdaftar_outlet_id_outlet_id_fk": {
+          "name": "perangkat_terdaftar_outlet_id_outlet_id_fk",
+          "tableFrom": "perangkat_terdaftar",
+          "columnsFrom": [
+            "outlet_id"
+          ],
+          "tableTo": "outlet",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "perangkat_terdaftar_anggota_aktif_id_anggota_id_fk": {
+          "name": "perangkat_terdaftar_anggota_aktif_id_anggota_id_fk",
+          "tableFrom": "perangkat_terdaftar",
+          "columnsFrom": [
+            "anggota_aktif_id"
+          ],
+          "tableTo": "anggota",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "perangkat_terdaftar_hashToken_unique": {
+          "name": "perangkat_terdaftar_hashToken_unique",
+          "columns": [
+            "hash_token"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1785,116 +1214,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.stasiun": {
-      "name": "stasiun",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()::text"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "outlet_id": {
-          "name": "outlet_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "nama": {
-          "name": "nama",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "stasiun_tenant_id_index": {
-          "name": "stasiun_tenant_id_index",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "stasiun_outlet_id_index": {
-          "name": "stasiun_outlet_id_index",
-          "columns": [
-            {
-              "expression": "outlet_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "stasiun_tenant_id_tenant_id_fk": {
-          "name": "stasiun_tenant_id_tenant_id_fk",
-          "tableFrom": "stasiun",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenant",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "stasiun_outlet_id_outlet_id_fk": {
-          "name": "stasiun_outlet_id_outlet_id_fk",
-          "tableFrom": "stasiun",
-          "columnsFrom": [
-            "outlet_id"
-          ],
-          "tableTo": "outlet",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.tenant": {
       "name": "tenant",
       "schema": "",
@@ -1934,8 +1253,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.varian": {
-      "name": "varian",
+    "public.undangan_karyawan": {
+      "name": "undangan_karyawan",
       "schema": "",
       "columns": {
         "id": {
@@ -1951,30 +1270,35 @@
           "primaryKey": false,
           "notNull": true
         },
-        "menu_id": {
-          "name": "menu_id",
+        "anggota_id": {
+          "name": "anggota_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "nama": {
-          "name": "nama",
+        "email": {
+          "name": "email",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "harga": {
-          "name": "harga",
-          "type": "bigint",
+        "hash_token": {
+          "name": "hash_token",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "urutan": {
-          "name": "urutan",
-          "type": "integer",
+        "kedaluwarsa_pada": {
+          "name": "kedaluwarsa_pada",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": 0
+          "notNull": true
+        },
+        "diterima_pada": {
+          "name": "diterima_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1985,8 +1309,8 @@
         }
       },
       "indexes": {
-        "varian_tenant_id_index": {
-          "name": "varian_tenant_id_index",
+        "undangan_karyawan_tenant_id_index": {
+          "name": "undangan_karyawan_tenant_id_index",
           "columns": [
             {
               "expression": "tenant_id",
@@ -2000,11 +1324,11 @@
           "method": "btree",
           "concurrently": false
         },
-        "varian_menu_id_index": {
-          "name": "varian_menu_id_index",
+        "undangan_karyawan_anggota_id_index": {
+          "name": "undangan_karyawan_anggota_id_index",
           "columns": [
             {
-              "expression": "menu_id",
+              "expression": "anggota_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2017,9 +1341,9 @@
         }
       },
       "foreignKeys": {
-        "varian_tenant_id_tenant_id_fk": {
-          "name": "varian_tenant_id_tenant_id_fk",
-          "tableFrom": "varian",
+        "undangan_karyawan_tenant_id_tenant_id_fk": {
+          "name": "undangan_karyawan_tenant_id_tenant_id_fk",
+          "tableFrom": "undangan_karyawan",
           "columnsFrom": [
             "tenant_id"
           ],
@@ -2030,13 +1354,13 @@
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "varian_menu_id_menu_id_fk": {
-          "name": "varian_menu_id_menu_id_fk",
-          "tableFrom": "varian",
+        "undangan_karyawan_anggota_id_anggota_id_fk": {
+          "name": "undangan_karyawan_anggota_id_anggota_id_fk",
+          "tableFrom": "undangan_karyawan",
           "columnsFrom": [
-            "menu_id"
+            "anggota_id"
           ],
-          "tableTo": "menu",
+          "tableTo": "anggota",
           "columnsTo": [
             "id"
           ],
@@ -2045,7 +1369,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "undangan_karyawan_hashToken_unique": {
+          "name": "undangan_karyawan_hashToken_unique",
+          "columns": [
+            "hash_token"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

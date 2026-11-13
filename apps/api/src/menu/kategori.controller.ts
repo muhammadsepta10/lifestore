@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Patch, Post, Put, UseGuards } f
 import { asc, eq } from 'drizzle-orm';
 import { Database } from '../database/database';
 import { kategori } from '../database/schema';
+import { PerluIzin } from '../izin/izin';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { objek, pilihan as pilihanDari, teks, teksOpsional } from '../umum/validasi';
 import { aturUrutan, idDaftar, pastikanKategori, pastikanMerek, urlOpsional, urutanBerikutnya } from './bersama';
@@ -29,6 +30,7 @@ export class KategoriController {
   constructor(private readonly db: Database) {}
 
   @Get('merek/:merekId/kategori')
+  @PerluIzin('menu.lihat')
   async daftar(@Param('merekId') merekId: string) {
     const tx = this.db.tenant();
     await pastikanMerek(tx, merekId);
@@ -37,6 +39,7 @@ export class KategoriController {
   }
 
   @Post('merek/:merekId/kategori')
+  @PerluIzin('menu.ubah')
   @HttpCode(201)
   async tambah(@Param('merekId') merekId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
@@ -59,6 +62,7 @@ export class KategoriController {
 
   /** Atur urutan: `ids` berisi semua (atau sebagian) Kategori Merek dari depan ke belakang. */
   @Put('merek/:merekId/kategori/urutan')
+  @PerluIzin('menu.ubah')
   async urutkan(@Param('merekId') merekId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
     await pastikanMerek(tx, merekId);
@@ -67,6 +71,7 @@ export class KategoriController {
   }
 
   @Patch('kategori/:id')
+  @PerluIzin('menu.ubah')
   async ubah(@Param('id') id: string, @Body() body: unknown) {
     const tx = this.db.tenant();
     await pastikanKategori(tx, id);

@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from '
 import { asc, eq } from 'drizzle-orm';
 import { Database, type TxDb } from '../database/database';
 import { stasiun } from '../database/schema';
+import { type Pelaku, PelakuAktif, PerluIzin, pastikanIzin } from '../izin/izin';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { objek, teks } from '../umum/validasi';
 import { pastikanOutlet, pastikanStasiun, urutanBerikutnya } from './bersama';
@@ -24,6 +25,7 @@ export class StasiunController {
   constructor(private readonly db: Database) {}
 
   @Get('outlet/:outletId/stasiun')
+  @PerluIzin('menu.lihat', { outletParam: 'outletId' })
   async daftar(@Param('outletId') outletId: string) {
     const tx = this.db.tenant();
     await pastikanOutlet(tx, outletId);
@@ -32,6 +34,7 @@ export class StasiunController {
   }
 
   @Post('outlet/:outletId/stasiun')
+  @PerluIzin('stasiun.kelola', { outletParam: 'outletId' })
   @HttpCode(201)
   async tambah(@Param('outletId') outletId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
@@ -44,10 +47,13 @@ export class StasiunController {
     return tampilkanStasiun(s!);
   }
 
+  /** Izin dicek terhadap Outlet Stasiun itu (rute tidak membawa ID Outlet). */
   @Patch('stasiun/:id')
-  async ubah(@Param('id') id: string, @Body() body: unknown) {
+  @PerluIzin('stasiun.kelola')
+  async ubah(@Param('id') id: string, @Body() body: unknown, @PelakuAktif() pelaku: Pelaku) {
     const tx = this.db.tenant();
-    await pastikanStasiun(tx, id);
+    const lama = await pastikanStasiun(tx, id);
+    pastikanIzin(pelaku, 'stasiun.kelola', lama.outletId);
     const nama = teks(objek(body), 'nama', { maks: 100 });
     const [s] = await tx.update(stasiun).set({ nama }).where(eq(stasiun.id, id)).returning();
     return tampilkanStasiun(s!);

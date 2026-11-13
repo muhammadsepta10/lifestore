@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, notInArray } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import { Database, type TxDb } from '../database/database';
 import { grupPilihan, hargaOutlet, menu, pilihan, varian } from '../database/schema';
+import { PerluIzin } from '../izin/izin';
 import { Sesi, SesiGuard, type SesiPengguna } from '../identitas/sesi.guard';
 import { boolean, type Masukan, objek, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { aturUrutan, bulat, idDaftar, pastikanKategori, pastikanMenu, pastikanMerek, rupiah, urlOpsional, urutanBerikutnya } from './bersama';
@@ -212,6 +213,7 @@ export class MenuController {
 
   /** Semua Menu Merek untuk pengelolaan, termasuk yang nonaktif. */
   @Get('merek/:merekId/menu')
+  @PerluIzin('menu.lihat')
   async daftar(@Param('merekId') merekId: string) {
     const tx = this.db.tenant();
     await pastikanMerek(tx, merekId);
@@ -220,6 +222,7 @@ export class MenuController {
   }
 
   @Post('merek/:merekId/menu')
+  @PerluIzin('menu.ubah')
   @HttpCode(201)
   async tambah(@Param('merekId') merekId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
@@ -255,11 +258,13 @@ export class MenuController {
   }
 
   @Get('menu/:id')
+  @PerluIzin('menu.lihat')
   async detail(@Param('id') id: string) {
     return muatSatuMenu(this.db.tenant(), id);
   }
 
   @Put('merek/:merekId/menu/urutan')
+  @PerluIzin('menu.ubah')
   async urutkan(@Param('merekId') merekId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
     await pastikanMerek(tx, merekId);
@@ -273,6 +278,7 @@ export class MenuController {
    * `aktif: false` menonaktifkan tanpa menghapus.
    */
   @Patch('menu/:id')
+  @PerluIzin('menu.ubah')
   async ubah(@Param('id') id: string, @Body() body: unknown, @Sesi() sesi: SesiPengguna) {
     const tx = this.db.tenant();
     const lama = await pastikanMenu(tx, id);

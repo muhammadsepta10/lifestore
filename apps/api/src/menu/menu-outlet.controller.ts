@@ -3,6 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import { Database, type TxDb } from '../database/database';
 import { hargaOutlet, kategori, menu, menuHabis, menuStasiun } from '../database/schema';
+import { PerluIzin } from '../izin/izin';
 import { Sesi, SesiGuard, type SesiPengguna } from '../identitas/sesi.guard';
 import { boolean, objek, teks, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { pastikanMenuDiOutlet, pastikanOutlet, pastikanStasiun, rupiah } from './bersama';
@@ -45,6 +46,15 @@ export async function menuDiOutlet(tx: TxDb, outletId: string, menuId: string): 
   return m!;
 }
 
+/** Tandai Menu Habis (`{habis: true}`) atau tersedia lagi di satu Outlet. */
+export async function aturHabis(tx: TxDb, outletId: string, menuId: string, body: unknown): Promise<MenuDiOutlet> {
+  const { outlet } = await pastikanMenuDiOutlet(tx, outletId, menuId);
+  const habis = boolean(objek(body), 'habis');
+  if (habis) await tx.insert(menuHabis).values({ tenantId: outlet.tenantId, outletId, menuId }).onConflictDoNothing();
+  else await tx.delete(menuHabis).where(and(eq(menuHabis.outletId, outletId), eq(menuHabis.menuId, menuId)));
+  return menuDiOutlet(tx, outletId, menuId);
+}
+
 /** Apakah Merek Outlet punya minimal satu Menu aktif (langkah Siap Jualan `menu`). */
 export async function adaMenuAktif(tx: TxDb, o: { merekId: string }): Promise<boolean> {
   const [m] = await tx
@@ -84,12 +94,14 @@ export class MenuOutletController {
 
   /** Daftar jual Outlet: Kategori dan Menu aktif dengan Stasiun, harga Outlet, dan tanda Habis. */
   @Get()
+  @PerluIzin('menu.lihat', { outletParam: 'outletId' })
   async daftar(@Param('outletId') outletId: string) {
     return menuDijualDiOutlet(this.db.tenant(), outletId);
   }
 
   /** Petakan Menu ke Stasiun Outlet ini; `stasiunId: null` melepas pemetaan. */
   @Put(':menuId/stasiun')
+  @PerluIzin('stasiun.kelola', { outletParam: 'outletId' })
   async petakanStasiun(@Param('outletId') outletId: string, @Param('menuId') menuId: string, @Body() body: unknown) {
     const tx = this.db.tenant();
     const { outlet } = await pastikanMenuDiOutlet(tx, outletId, menuId);
@@ -105,13 +117,9 @@ export class MenuOutletController {
 
   /** Tandai Menu Habis (atau tersedia lagi) di Outlet ini. Outlet lain tidak terpengaruh. */
   @Put(':menuId/habis')
+  @PerluIzin('menu.habis', { outletParam: 'outletId' })
   async aturHabis(@Param('outletId') outletId: string, @Param('menuId') menuId: string, @Body() body: unknown) {
-    const tx = this.db.tenant();
-    const { outlet } = await pastikanMenuDiOutlet(tx, outletId, menuId);
-    const habis = boolean(objek(body), 'habis');
-    if (habis) await tx.insert(menuHabis).values({ tenantId: outlet.tenantId, outletId, menuId }).onConflictDoNothing();
-    else await tx.delete(menuHabis).where(and(eq(menuHabis.outletId, outletId), eq(menuHabis.menuId, menuId)));
-    return menuDiOutlet(tx, outletId, menuId);
+    return aturHabis(this.db.tenant(), outletId, menuId, body);
   }
 
   /**
@@ -120,6 +128,7 @@ export class MenuOutletController {
    * override Menu ini di Outlet. Tercatat di Log Audit sebagai `ubah_harga_outlet`.
    */
   @Put(':menuId/harga')
+  @PerluIzin('menu.harga_outlet', { outletParam: 'outletId' })
   async aturHarga(
     @Param('outletId') outletId: string,
     @Param('menuId') menuId: string,

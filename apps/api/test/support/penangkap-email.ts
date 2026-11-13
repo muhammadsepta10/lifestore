@@ -20,4 +20,11 @@ export class PenangkapEmail extends PengirimEmail {
     if (!token) throw new Error(`Email untuk ${ke} tidak berisi tautan verifikasi`);
     return token;
   }
+
+  /** Token dari tautan undangan karyawan di email terakhir untuk alamat ini. */
+  tokenUndanganUntuk(ke: string): string {
+    const token = /\/undangan\?token=([\w.-]+)/.exec(this.terakhirUntuk(ke).teks)?.[1];
+    if (!token) throw new Error(`Email untuk ${ke} tidak berisi tautan undangan`);
+    return token;
+  }
 }

@@ -4,6 +4,7 @@ import supertest from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { konfigurasiAplikasi } from '../../src/aplikasi';
 import { PengirimEmail } from '../../src/email/email.module';
+import { Jam } from '../../src/umum/jam';
 import { buatDatabaseTes, type DatabaseTes } from './database-tes';
 import { PenangkapEmail } from './penangkap-email';
 
@@ -21,6 +22,10 @@ export interface DuniaTes {
   http: ReturnType<typeof supertest>;
   db: DatabaseTes;
   email: PenangkapEmail;
+  /** Jam aplikasi yang bisa dimajukan (kunci PIN sementara, kedaluwarsa). */
+  jam: JamTes;
+  /** Terima undangan karyawan dari email terakhir, lalu masuk sebagai Pengguna itu. */
+  terimaUndangan(email: string, opsi?: { kataSandi?: string }): Promise<PenggunaMasuk>;
   /** Daftar → verifikasi email → masuk. Mengembalikan pemilik dengan sesi dan Tenant aktif. */
   daftarTenant(opsi?: OpsiDaftar): Promise<PemilikTes>;
   /** Masuk sebagai Pengguna yang sudah terverifikasi. */
@@ -71,6 +76,44 @@ export interface PemilikTes extends PenggunaMasuk {
   buatMenu(data: DataMenuTes): Promise<string>;
   /** Buat Stasiun di Outlet (default Outlet pertama); mengembalikan ID-nya. */
   buatStasiun(nama: string, outletId?: string): Promise<string>;
+  /** Tambah karyawan (undangan email bila ada `email`, khusus PIN bila tidak). Mengembalikan ID Anggota. */
+  tambahKaryawan(data: DataKaryawan): Promise<string>;
+  /** Atur PIN Anggota mana pun (termasuk Pemilik sendiri: `anggotaSaya()`). */
+  aturPin(anggotaId: string, pin: string): Promise<void>;
+  /** ID Anggota Pemilik di Tenant aktif. */
+  anggotaSaya(): Promise<string>;
+  /** Siapkan Perangkat Terdaftar lalu daftarkan dengan kodenya, seperti manajer di tablet. */
+  daftarkanPerangkat(data?: { outletId?: string; nama?: string; awalan?: string }): Promise<PerangkatTes>;
+}
+
+export interface DataKaryawan {
+  nama?: string;
+  email?: string;
+  pin?: string;
+  penugasan?: { outletId: string; peran: 'manajer_outlet' | 'kasir' | 'pelayan' | 'dapur' }[];
+}
+
+/** Perangkat Terdaftar: klien HTTP yang membawa token perangkat (`Authorization: Perangkat`). */
+export interface PerangkatTes {
+  id: string;
+  token: string;
+  outletId: string;
+  awalan: string;
+  get(path: string): Permintaan;
+  post(path: string, body?: object): Permintaan;
+  /** Masuk dengan PIN (tanpa memeriksa status; pakai `.expect(...)`). */
+  masukPin(anggotaId: string, pin: string): Permintaan;
+}
+
+/** Jam tes: mulai dari waktu nyata, bisa dimajukan. */
+export class JamTes extends Jam {
+  private geser = 0;
+  override sekarang(): Date {
+    return new Date(Date.now() + this.geser);
+  }
+  maju(ms: number): void {
+    this.geser += ms;
+  }
 }
 
 /** Isi Menu untuk `buatMenu`; bentuknya sama dengan body `POST /v1/merek/:merekId/menu`. */
@@ -88,11 +131,14 @@ let nomor = 0;
 export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
   const db = await buatDatabaseTes();
   const email = new PenangkapEmail();
+  const jam = new JamTes();
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule.register({ databaseUrl: db.appUrl }), ...(opsi.modulTambahan ?? [])],
   })
     .overrideProvider(PengirimEmail)
     .useValue(email)
+    .overrideProvider(Jam)
+    .useValue(jam)
     .compile();
   const app = moduleRef.createNestApplication({ logger: false });
   konfigurasiAplikasi(app);
@@ -162,7 +208,47 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
         const res = await pengguna.post(`/v1/outlet/${o}/stasiun`, { nama }).expect(201);
         return res.body.id as string;
       },
+      async tambahKaryawan(d) {
+        nomor += 1;
+        const res = await pengguna.post('/v1/karyawan', { nama: d.nama ?? `Karyawan ${nomor}`, ...d }).expect(201);
+        return res.body.id as string;
+      },
+      async aturPin(anggotaId, pin) {
+        await pengguna.put(`/v1/karyawan/${anggotaId}/pin`, { pin }).expect(200);
+      },
+      async anggotaSaya() {
+        const daftar = (await pengguna.get('/v1/karyawan').expect(200)).body as { id: string; peran: string }[];
+        return daftar.find((k) => k.peran === 'pemilik')!.id;
+      },
+      async daftarkanPerangkat(d = {}) {
+        const target = d.outletId ?? outletId;
+        nomor += 1;
+        const siap = await pengguna
+          .post(`/v1/outlet/${target}/perangkat`, { nama: d.nama ?? `Tablet ${nomor}`, awalan: d.awalan ?? 'A' })
+          .expect(201);
+        const res = await http.post('/v1/perangkat/daftar').send({ kode: siap.body.kodePendaftaran }).expect(200);
+        return perangkatTes(res.body.tokenPerangkat, res.body.perangkat);
+      },
     };
+  }
+
+  function perangkatTes(token: string, p: { id: string; outletId: string; awalan: string }): PerangkatTes {
+    const auth = (r: Permintaan) => r.set('Authorization', `Perangkat ${token}`);
+    return {
+      id: p.id,
+      token,
+      outletId: p.outletId,
+      awalan: p.awalan,
+      get: (path) => auth(http.get(path)),
+      post: (path, b) => auth(http.post(path)).send(b ?? {}),
+      masukPin: (anggotaId, pin) => auth(http.post('/v1/perangkat/masuk')).send({ anggotaId, pin }),
+    };
+  }
+
+  async function terimaUndangan(alamat: string, o: { kataSandi?: string } = {}): Promise<PenggunaMasuk> {
+    const kataSandi = o.kataSandi ?? 'kata-sandi-karyawan';
+    await http.post('/v1/undangan/terima').send({ token: email.tokenUndanganUntuk(alamat), kataSandi }).expect(200);
+    return masuk(alamat, kataSandi);
   }
 
   return {
@@ -170,6 +256,8 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
     http,
     db,
     email,
+    jam,
+    terimaUndangan,
     daftarTenant,
     masuk,
     async tutup() {

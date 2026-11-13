@@ -5,6 +5,7 @@ import { PenulisLogAudit } from '../audit/audit.module';
 import { Database, type TxDb } from '../database/database';
 import { outlet, profilPajak } from '../database/schema';
 import { Sesi, SesiGuard, type SesiPengguna } from '../identitas/sesi.guard';
+import { PerluIzin } from '../izin/izin';
 import {
   angka,
   boolean,
@@ -79,6 +80,7 @@ export class ProfilPajakController {
 
   /** Profil Pajak yang berlaku pada `tanggal` (default hari ini). */
   @Get()
+  @PerluIzin('profil_pajak.lihat', { outletParam: 'outletId' })
   async berlaku(@Param('outletId') outletId: string, @Query('tanggal') tanggalQuery?: string) {
     await this.pastikanOutlet(outletId);
     const pada = tanggalQuery === undefined ? hariIni() : tanggal(tanggalQuery, 'tanggal');
@@ -88,6 +90,7 @@ export class ProfilPajakController {
   }
 
   @Get('riwayat')
+  @PerluIzin('profil_pajak.lihat', { outletParam: 'outletId' })
   async riwayat(@Param('outletId') outletId: string) {
     await this.pastikanOutlet(outletId);
     const baris = await this.db
@@ -105,6 +108,7 @@ export class ProfilPajakController {
    */
   @Post()
   @HttpCode(201)
+  @PerluIzin('profil_pajak.ubah', { outletParam: 'outletId' })
   async ubah(@Param('outletId') outletId: string, @Body() body: unknown, @Sesi() sesi: SesiPengguna) {
     const o = await this.pastikanOutlet(outletId);
     const m = objek(body);

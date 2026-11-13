@@ -10,8 +10,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { and, eq, gt } from 'drizzle-orm';
 import { Database } from '../database/database';
-import type { RequestBertenant } from '../database/konteks-tenant';
-import { anggota, sesi } from '../database/schema';
+import { sesi } from '../database/schema';
+import { muatAnggota, type Pelaku, periksaIzinRute, type RequestBerpelaku } from '../izin/izin';
 import { hashToken } from './kripto';
 
 /** Sesi dashboard Pengguna yang sudah diperiksa guard. */
@@ -23,7 +23,7 @@ export interface SesiPengguna {
   anggota?: { id: string; peran: string };
 }
 
-export type RequestBersesi = RequestBertenant & { sesi?: SesiPengguna };
+export type RequestBersesi = RequestBerpelaku & { sesi?: SesiPengguna };
 
 const TANPA_TENANT = 'lifestore:tanpaTenant';
 
@@ -67,11 +67,13 @@ export class SesiGuard implements CanActivate {
     }
     const konteks = { tenantId: baris.tenantAktifId };
     // Keanggotaan diperiksa ulang tiap request: Anggota yang dicabut langsung kehilangan akses.
-    const [keanggotaan] = await this.db.denganTenant(konteks, (tx) =>
-      tx.select({ id: anggota.id, peran: anggota.peran }).from(anggota).where(eq(anggota.penggunaId, baris.penggunaId)),
-    );
-    if (!keanggotaan) throw new ForbiddenException({ kode: 'bukan_anggota', pesan: 'Anda bukan Anggota Tenant ini.' });
-    req.sesi = { ...baris, anggota: keanggotaan };
+    // Anggota yang dinonaktifkan juga ditolak. Izin rute diperiksa dari Peran di Penugasan.
+    const a = await this.db.denganTenant(konteks, (tx) => muatAnggota(tx, { penggunaId: baris.penggunaId }));
+    if (!a) throw new ForbiddenException({ kode: 'bukan_anggota', pesan: 'Anda bukan Anggota Tenant ini.' });
+    const pelaku: Pelaku = { ...a, perangkatId: null, outletId: null };
+    periksaIzinRute(this.reflector, ctx, pelaku);
+    req.sesi = { ...baris, anggota: { id: a.anggotaId, peran: a.peran } };
+    req.pelaku = pelaku;
     req.konteksTenant = konteks;
     return true;
   }

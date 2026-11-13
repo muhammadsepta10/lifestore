@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buatDuniaTes, type DuniaTes, type PemilikTes } from './support/dunia-tes';
+import { buatDuniaTes, type DuniaTes, type PemilikTes, type PerangkatTes } from './support/dunia-tes';
 
 // Tes isolasi di seam HTTP: dua Tenant; setiap endpoint baca/tulis dari Tenant A tidak pernah
 // mengembalikan atau mengubah data Tenant B, termasuk saat ID Tenant B ditebak atau diketahui.
@@ -18,6 +18,9 @@ describe('Isolasi Tenant lewat API', () => {
   let stasiunB: string;
   // Menu Tenant A, untuk mencoba mereferensikan ID Tenant B
   let menuA: string;
+  let karyawanB: string;
+  let tabletA: PerangkatTes;
+  let tabletB: PerangkatTes;
 
   beforeAll(async () => {
     dunia = await buatDuniaTes();
@@ -46,6 +49,9 @@ describe('Isolasi Tenant lewat API', () => {
     await b.put(`/v1/outlet/${b.outletId}/menu/${menuB}/habis`, { habis: true }).expect(200);
 
     menuA = await a.buatMenu({ nama: 'Menu Warung A', harga: 5000 });
+    karyawanB = await b.tambahKaryawan({ nama: 'Kasir B', pin: '1234', penugasan: [{ outletId: b.outletId, peran: 'kasir' }] });
+    tabletB = await b.daftarkanPerangkat({ awalan: 'B' });
+    tabletA = await a.daftarkanPerangkat({ awalan: 'A' });
   });
   afterAll(() => dunia?.tutup());
 
@@ -61,6 +67,8 @@ describe('Isolasi Tenant lewat API', () => {
       menu: (await b.get(`/v1/merek/${b.merekId}/menu`).expect(200)).body,
       menuOutlet: (await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body,
       stasiun: (await b.get(`/v1/outlet/${b.outletId}/stasiun`).expect(200)).body,
+      karyawan: (await b.get('/v1/karyawan').expect(200)).body,
+      perangkat: (await b.get(`/v1/outlet/${b.outletId}/perangkat`).expect(200)).body,
     };
   }
 
@@ -93,6 +101,7 @@ describe('Isolasi Tenant lewat API', () => {
       `/v1/menu/${menuB}`,
       `/v1/outlet/${b.outletId}/menu`,
       `/v1/outlet/${b.outletId}/stasiun`,
+      `/v1/outlet/${b.outletId}/perangkat`,
     ]) {
       const res = await a.get(path);
       expect({ path, status: res.status }).toEqual({ path, status: 404 });
@@ -130,6 +139,13 @@ describe('Isolasi Tenant lewat API', () => {
       () => a.put(`/v1/outlet/${a.outletId}/menu/${menuA}/harga`, { varian: [{ varianId: varianB, harga: 1 }] }),
       () => a.patch(`/v1/menu/${menuA}`, { varian: [{ id: varianB, nama: 'Curian', harga: 1 }] }),
       () => a.patch(`/v1/menu/${menuA}`, { grupPilihan: [{ nama: 'G', maksimum: 1, pilihan: [{ id: pilihanB, nama: 'Curian', harga: 1 }] }] }),
+      () => a.put(`/v1/karyawan/${karyawanB}/penugasan`, { penugasan: [] }),
+      () => a.put(`/v1/karyawan/${karyawanB}/pin`, { pin: '0000' }),
+      () => a.post(`/v1/karyawan/${karyawanB}/nonaktifkan`),
+      () => a.post('/v1/karyawan', { nama: 'Selundupan', pin: '1234', penugasan: [{ outletId: b.outletId, peran: 'kasir' }] }),
+      () => a.post(`/v1/outlet/${b.outletId}/perangkat`, { nama: 'Selundupan', awalan: 'X' }),
+      () => a.post(`/v1/outlet/${b.outletId}/perangkat/${tabletB.id}/cabut`),
+      () => a.post(`/v1/outlet/${a.outletId}/perangkat/${tabletB.id}/cabut`),
     ];
     for (const [i, coba] of percobaan.entries()) {
       const res = await coba();
@@ -158,5 +174,29 @@ describe('Isolasi Tenant lewat API', () => {
     await a.post('/v1/sesi/tenant', { tenantId: b.tenantId }).expect(403);
     const sesi = (await a.get('/v1/sesi').expect(200)).body;
     expect(sesi.tenant).toEqual([{ id: a.tenantId, nama: 'Warung A' }]);
+  });
+
+  it('karyawan dan Perangkat Terdaftar Tenant B tidak terlihat atau terpakai dari Tenant A', async () => {
+    const karyawanA = (await a.get('/v1/karyawan').expect(200)).body;
+    expect(karyawanA.map((k: { peran: string }) => k.peran)).toEqual(['pemilik']);
+    // Perangkat Tenant A tidak menampilkan, dan tidak bisa memakai PIN, karyawan Tenant B.
+    expect((await tabletA.get('/v1/perangkat/saya').expect(200)).body.karyawan).toEqual([]);
+    expect((await tabletA.masukPin(karyawanB, '1234')).status).toBe(401);
+    // Token perangkat B yang ditempeli ID Tenant A tidak dikenal.
+    const tokenPalsu = `${a.tenantId}.${tabletB.token.split('.')[1]}`;
+    expect((await dunia.http.get('/v1/perangkat/saya').set('Authorization', `Perangkat ${tokenPalsu}`)).status).toBe(401);
+    // Perangkat B tetap berfungsi.
+    await tabletB.masukPin(karyawanB, '1234').expect(200);
+  });
+
+  it('Perangkat Terdaftar Tenant A tidak melihat atau menandai Habis Menu Tenant B', async () => {
+    await a.aturPin(await a.anggotaSaya(), '4321');
+    await tabletA.masukPin(await a.anggotaSaya(), '4321').expect(200);
+    const dijual = (await tabletA.get('/v1/kasir/menu').expect(200)).body;
+    expect(dijual.menu.map((m: { id: string }) => m.id)).toEqual([menuA]);
+    expect(JSON.stringify(dijual)).not.toContain('Warung B');
+    const sebelum = (await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body;
+    expect((await tabletA.post(`/v1/kasir/menu/${menuB}/habis`, { habis: false })).status).toBe(404);
+    expect((await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body).toEqual(sebelum);
   });
 });

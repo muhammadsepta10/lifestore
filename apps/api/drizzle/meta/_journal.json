@@ -40,15 +40,29 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1794570900563,
-      "tag": "0005_menu",
+      "when": 1794570943697,
+      "tag": "0005_karyawan_perangkat",
       "breakpoints": true
     },
     {
       "idx": 6,
       "version": "7",
-      "when": 1794570905284,
-      "tag": "0006_rls_menu",
+      "when": 1794570944342,
+      "tag": "0006_rls_karyawan_perangkat",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794571518749,
+      "tag": "0007_menu",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794571519423,
+      "tag": "0008_rls_menu",
       "breakpoints": true
     }
   ]

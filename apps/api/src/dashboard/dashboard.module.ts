@@ -3,10 +3,13 @@ import { and, asc, eq } from 'drizzle-orm';
 import { Database, type TxDb } from '../database/database';
 import { outlet, siapJualanDilewati, tenant } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
+import { adaKaryawanSiap } from '../karyawan/karyawan.module';
+import { adaPerangkatAktif } from '../karyawan/perangkat';
 import { adaMenuAktif } from '../menu/menu-outlet.controller';
 import { adaStasiun } from '../menu/stasiun.controller';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
 import { hariIni, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { PerluIzin } from '../izin/izin';
 
 type BarisOutlet = typeof outlet.$inferSelect;
 
@@ -38,8 +41,8 @@ const PEMERIKSA: Record<LangkahSiapJualan, (tx: TxDb, o: BarisOutlet) => Promise
   stasiun: (tx, o) => adaStasiun(tx, o.id),
   metode_bayar: async () => false,
   meja: async () => false,
-  karyawan: async () => false,
-  perangkat: async () => false,
+  karyawan: (tx, o) => adaKaryawanSiap(tx, o.id),
+  perangkat: (tx, o) => adaPerangkatAktif(tx, o.id),
 };
 
 export async function hitungSiapJualan(tx: TxDb, o: BarisOutlet) {
@@ -77,6 +80,7 @@ export class DashboardController {
 
   /** Dashboard: sisa Masa Coba dan checklist Siap Jualan per Outlet. */
   @Get('dashboard')
+  @PerluIzin('dashboard.lihat')
   async dashboard() {
     const tx = this.db.tenant();
     const [t] = await tx.select().from(tenant);
@@ -93,6 +97,7 @@ export class DashboardController {
   }
 
   @Get('outlet/:id/siap-jualan')
+  @PerluIzin('dashboard.lihat', { outletParam: 'id' })
   async siapJualan(@Param('id') id: string) {
     return hitungSiapJualan(this.db.tenant(), await this.outlet(id));
   }
@@ -100,6 +105,7 @@ export class DashboardController {
   /** Lewati satu langkah. Langkah tetap dihitung selesai begitu datanya ada. */
   @Post('outlet/:id/siap-jualan/:langkah/lewati')
   @HttpCode(200)
+  @PerluIzin('outlet.ubah', { outletParam: 'id' })
   async lewati(@Param('id') id: string, @Param('langkah') langkah: string) {
     const o = await this.outlet(id);
     const tx = this.db.tenant();
@@ -111,6 +117,7 @@ export class DashboardController {
   }
 
   @Delete('outlet/:id/siap-jualan/:langkah/lewati')
+  @PerluIzin('outlet.ubah', { outletParam: 'id' })
   async batalLewati(@Param('id') id: string, @Param('langkah') langkah: string) {
     const o = await this.outlet(id);
     const tx = this.db.tenant();

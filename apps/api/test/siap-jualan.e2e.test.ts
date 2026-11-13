@@ -102,4 +102,45 @@ describe('Dashboard: Masa Coba dan checklist Siap Jualan', () => {
     const res = (await pemilik.get('/v1/dashboard').expect(200)).body;
     expect(res.outlet.map((o: { nama: string }) => o.nama)).toEqual([expect.any(String), 'Cabang Dua']);
   });
+
+  it('langkah karyawan selesai saat ada karyawan ber-PIN yang ditugaskan ke Outlet', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const outletKedua = await pemilik.tambahOutlet();
+    const url = `/v1/outlet/${pemilik.outletId}/siap-jualan`;
+    // Karyawan undangan tanpa PIN, atau ber-PIN di Outlet lain, belum cukup.
+    await pemilik.tambahKaryawan({ email: 'belum-pin@contoh.test', penugasan: [{ outletId: pemilik.outletId, peran: 'kasir' }] });
+    const id = await pemilik.tambahKaryawan({ pin: '1234', penugasan: [{ outletId: outletKedua, peran: 'kasir' }] });
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).karyawan).toBe('belum');
+
+    await pemilik.put(`/v1/karyawan/${id}/penugasan`, { penugasan: [{ outletId: pemilik.outletId, peran: 'kasir' }] }).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).karyawan).toBe('selesai');
+
+    await pemilik.post(`/v1/karyawan/${id}/nonaktifkan`).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).karyawan).toBe('belum');
+  });
+
+  it('Pemilik yang memberi dirinya PIN juga menyelesaikan langkah karyawan', async () => {
+    const pemilik = await dunia.daftarTenant();
+    await pemilik.aturPin(await pemilik.anggotaSaya(), '8642');
+    const siap = (await pemilik.get(`/v1/outlet/${pemilik.outletId}/siap-jualan`).expect(200)).body;
+    expect(statusLangkah(siap).karyawan).toBe('selesai');
+  });
+
+  it('langkah Perangkat Terdaftar selesai setelah perangkat didaftarkan, dan kembali belum saat dicabut', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const url = `/v1/outlet/${pemilik.outletId}/siap-jualan`;
+    // Kode yang belum dipakai belum menghitung perangkat.
+    await pemilik.post(`/v1/outlet/${pemilik.outletId}/perangkat`, { nama: 'Belum dipasang', awalan: 'Z' }).expect(201);
+    let siap = (await pemilik.get(url).expect(200)).body;
+    expect(statusLangkah(siap).perangkat).toBe('belum');
+    expect(siap.kasir.kurang).toContain('perangkat');
+
+    const tablet = await pemilik.daftarkanPerangkat({ awalan: 'A' });
+    siap = (await pemilik.get(url).expect(200)).body;
+    expect(statusLangkah(siap).perangkat).toBe('selesai');
+    expect(siap.kasir.kurang).toEqual(['menu']);
+
+    await pemilik.post(`/v1/outlet/${pemilik.outletId}/perangkat/${tablet.id}/cabut`).expect(200);
+    expect(statusLangkah((await pemilik.get(url).expect(200)).body).perangkat).toBe('belum');
+  });
 });

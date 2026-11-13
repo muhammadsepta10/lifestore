@@ -17,6 +17,7 @@ import { Database, type TxDb } from '../database/database';
 import { anggota, merek, pengguna, sesi, tenant, verifikasiEmail } from '../database/schema';
 import { PengirimEmail } from '../email/email.module';
 import { KONFIGURASI_API, type KonfigurasiApi } from '../konfigurasi';
+import { PERAN_PEMILIK } from '../izin/izin';
 import { buatOutlet } from '../usaha/usaha.module';
 import { email, objek, teks, tidakValid } from '../umum/validasi';
 import { buatToken, cocokKataSandi, HASH_PALSU, hashKataSandi, hashToken } from './kripto';
@@ -26,8 +27,6 @@ const HARI_MS = 24 * 60 * 60 * 1000;
 export const LAMA_MASA_COBA_HARI = 14;
 const LAMA_SESI_HARI = 30;
 const LAMA_TOKEN_VERIFIKASI_HARI = 3;
-/** Peran bawaan Anggota yang mendirikan Tenant. */
-export const PERAN_PEMILIK = 'pemilik';
 
 /**
  * Pendirian Tenant dalam satu transaksi: Tenant + Masa Coba, Merek default, Outlet pertama
@@ -203,7 +202,7 @@ export class IdentitasController {
         .select({ id: tenant.id, nama: tenant.nama })
         .from(anggota)
         .innerJoin(tenant, eq(tenant.id, anggota.tenantId))
-        .where(eq(anggota.penggunaId, penggunaId))
+        .where(and(eq(anggota.penggunaId, penggunaId), eq(anggota.aktif, true)))
         .orderBy(asc(tenant.createdAt), asc(tenant.id)),
     );
   }
