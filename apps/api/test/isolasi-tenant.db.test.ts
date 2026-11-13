@@ -75,6 +75,32 @@ describe('Isolasi Tenant di database', () => {
     expect(rows).toEqual([{ nama: 'Merek B' }]);
   });
 
+  it('app.pengguna_id hanya membuka Anggota dan Tenant milik Pengguna itu, dan hanya untuk dibaca', async () => {
+    const PENGGUNA_A = '00000000-0000-4000-8000-0000000000f1';
+    const PENGGUNA_B = '00000000-0000-4000-8000-0000000000f2';
+    await db.admin.query(
+      `INSERT INTO pengguna (id, email, hash_kata_sandi) VALUES ($1, 'a@tes.test', 'x'), ($2, 'b@tes.test', 'x')`,
+      [PENGGUNA_A, PENGGUNA_B],
+    );
+    await db.admin.query(
+      `INSERT INTO anggota (tenant_id, pengguna_id, peran) VALUES ($1, $3, 'pemilik'), ($2, $4, 'pemilik')`,
+      [TENANT_A, TENANT_B, PENGGUNA_A, PENGGUNA_B],
+    );
+    const c = await app.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query(`SELECT set_config('app.pengguna_id', $1, true)`, [PENGGUNA_A]);
+      expect((await c.query('SELECT tenant_id FROM anggota')).rows).toEqual([{ tenant_id: TENANT_A }]);
+      expect((await c.query('SELECT nama FROM tenant')).rows).toEqual([{ nama: 'Warung A' }]);
+      expect((await c.query('SELECT * FROM merek')).rows).toEqual([]);
+      const diubah = await c.query(`UPDATE anggota SET peran = 'kasir'`);
+      expect(diubah.rowCount).toBe(0);
+      await c.query('ROLLBACK');
+    } finally {
+      c.release();
+    }
+  });
+
   it('setiap tabel ber-tenant_id memakai RLS yang dipaksa dan punya kebijakan', async () => {
     // Penjaga untuk tiket berikutnya: tabel milik Tenant baru tanpa RLS akan membuat tes ini gagal.
     const { rows } = await db.admin.query<{ tabel: string; rls: boolean; dipaksa: boolean; kebijakan: number }>(`

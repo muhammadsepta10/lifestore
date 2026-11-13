@@ -55,6 +55,19 @@ export class Database implements OnApplicationShutdown {
     });
   }
 
+  /**
+   * Transaksi tanpa Tenant aktif, hanya `app.pengguna_id`. Sengaja terpisah dari `denganTenant`:
+   * di transaksi Tenant kebijakan milik-Pengguna tidak aktif, jadi Tenant lain milik Pengguna yang
+   * sama pun tidak terlihat. RLS lalu hanya mengizinkan membaca
+   * baris Anggota milik Pengguna itu dan Tenant tempat ia menjadi Anggota (untuk memilih Tenant).
+   */
+  async denganPengguna<T>(penggunaId: string, fn: (tx: TxDb) => Promise<T>): Promise<T> {
+    return this.global.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.pengguna_id', ${penggunaId}, true)`);
+      return fn(tx);
+    });
+  }
+
   async sehat(): Promise<boolean> {
     try {
       await this.global.execute(sql`select 1`);

@@ -22,6 +22,20 @@
       "when": 1794553714302,
       "tag": "0002_rls_tenant_merek",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794570044920,
+      "tag": "0003_identitas_outlet_pajak_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794570045595,
+      "tag": "0004_rls_identitas_audit",
+      "breakpoints": true
     }
   ]
 }

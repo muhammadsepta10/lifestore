@@ -34,9 +34,27 @@ export async function buatDatabaseTes(opsi: { migrasi?: boolean } = {}): Promise
     admin,
     async hapus() {
       await admin.end();
-      await denganServer((c) => c.query(`DROP DATABASE IF EXISTS ${nama} WITH (FORCE)`));
+      await hapusDatabase(nama);
     },
   };
+}
+
+/**
+ * Hapus database setelah koneksi API tertutup. Koneksi yang baru saja diakhiri pool bisa masih
+ * menutup soketnya; FORCE langsung akan memutusnya dan memunculkan error tak tertangani di proses
+ * tes. Jadi tunggu dulu sebentar, baru FORCE sebagai jalan terakhir.
+ */
+async function hapusDatabase(nama: string): Promise<void> {
+  for (let i = 0; i < 40; i++) {
+    try {
+      await denganServer((c) => c.query(`DROP DATABASE IF EXISTS ${nama}`));
+      return;
+    } catch (err) {
+      if ((err as { code?: string }).code !== '55006') throw err; // object_in_use
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+  await denganServer((c) => c.query(`DROP DATABASE IF EXISTS ${nama} WITH (FORCE)`));
 }
 
 async function denganServer<T>(fn: (c: pg.Client) => Promise<T>): Promise<T> {
