@@ -10,7 +10,7 @@
  * - Setiap tabel milik Tenant: kolom `tenant_id` + RLS dipaksa + kebijakan `tenant_id = app_tenant_id()`.
  */
 import { sql } from 'drizzle-orm';
-import { boolean, date, index, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
 const id = () =>
   text()
@@ -197,4 +197,186 @@ export const siapJualanDilewati = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex().on(t.outletId, t.langkah), index().on(t.tenantId)],
+);
+
+// ---------------------------------------------------------------------------
+// Menu (#35). Kategori, Menu, Varian, Grup Pilihan milik Merek; Stasiun, override harga,
+// pemetaan Stasiun, dan Habis milik Outlet.
+// ---------------------------------------------------------------------------
+
+const harga = () => bigint({ mode: 'number' }).notNull();
+const urutan = () => integer().notNull().default(0);
+
+/** Kategori Menu di level Merek. `warna` = kunci pastel desain v3 (`PASTEL_KATEGORI`). */
+export const kategori = pgTable(
+  'kategori',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    merekId: text()
+      .notNull()
+      .references(() => merek.id),
+    nama: text().notNull(),
+    warna: text().notNull(),
+    ikon: text(),
+    gambarUrl: text(),
+    urutan: urutan(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.merekId)],
+);
+
+/**
+ * Menu di level Merek. Tidak pernah dihapus: `aktif = false` menyembunyikannya dari penjualan,
+ * tetapi barisnya tetap ada untuk riwayat.
+ */
+export const menu = pgTable(
+  'menu',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    merekId: text()
+      .notNull()
+      .references(() => merek.id),
+    kategoriId: text()
+      .notNull()
+      .references(() => kategori.id),
+    nama: text().notNull(),
+    /** Harga dasar Merek. Bila Menu punya Varian, harga Varian yang dipakai. */
+    harga: harga(),
+    deskripsi: text(),
+    fotoUrl: text(),
+    urutan: urutan(),
+    aktif: boolean().notNull().default(true),
+    bebasPajak: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.merekId), index().on(t.kategoriId)],
+);
+
+/** Varian: pilihan wajib-tepat-satu dengan harga sendiri (harga penuh, bukan selisih). */
+export const varian = pgTable(
+  'varian',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    nama: text().notNull(),
+    harga: harga(),
+    urutan: urutan(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.menuId)],
+);
+
+/** Grup Pilihan pada Menu dengan aturan jumlah minimum/maksimum pilihan. */
+export const grupPilihan = pgTable(
+  'grup_pilihan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    nama: text().notNull(),
+    minimum: integer().notNull().default(0),
+    maksimum: integer().notNull(),
+    urutan: urutan(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.menuId)],
+);
+
+/** Satu pilihan di Grup Pilihan; `harga` 0 berarti gratis, selain itu tambahan per unit. */
+export const pilihan = pgTable(
+  'pilihan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    grupPilihanId: text()
+      .notNull()
+      .references(() => grupPilihan.id),
+    nama: text().notNull(),
+    harga: harga(),
+    urutan: urutan(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.grupPilihanId)],
+);
+
+/** Stasiun dapur di sebuah Outlet (misal Dapur, Bar). */
+export const stasiun = pgTable(
+  'stasiun',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    nama: text().notNull(),
+    urutan: urutan(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.outletId)],
+);
+
+/** Pemetaan Menu → Stasiun untuk satu Outlet (satu Stasiun per Menu per Outlet). */
+export const menuStasiun = pgTable(
+  'menu_stasiun',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    stasiunId: text()
+      .notNull()
+      .references(() => stasiun.id),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.menuId, t.outletId), index().on(t.tenantId), index().on(t.stasiunId)],
+);
+
+/**
+ * Override harga per Outlet. `varianId` null = harga Menu; terisi = harga Varian itu.
+ * Tidak ada baris = harga Merek berlaku.
+ */
+export const hargaOutlet = pgTable(
+  'harga_outlet',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    varianId: text().references(() => varian.id),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    harga: harga(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique().on(t.outletId, t.menuId, t.varianId).nullsNotDistinct(), index().on(t.tenantId)],
+);
+
+/** Menu yang sedang Habis di sebuah Outlet (ada baris = Habis). */
+export const menuHabis = pgTable(
+  'menu_habis',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    menuId: text()
+      .notNull()
+      .references(() => menu.id),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.outletId, t.menuId), index().on(t.tenantId)],
 );

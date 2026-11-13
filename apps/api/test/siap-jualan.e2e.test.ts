@@ -70,6 +70,32 @@ describe('Dashboard: Masa Coba dan checklist Siap Jualan', () => {
     expect(statusLangkah(res).profil_pajak).toBe('selesai');
   });
 
+  it('langkah Menu tercentang setelah ada Menu aktif, dan kembali belum bila semua Menu nonaktif', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const outletDua = await pemilik.tambahOutlet();
+    const siap = async (o = pemilik.outletId) => (await pemilik.get(`/v1/outlet/${o}/siap-jualan`).expect(200)).body;
+    expect(statusLangkah(await siap()).menu).toBe('belum');
+
+    const menu = await pemilik.buatMenu({ nama: 'Soto Ayam', harga: 15000 });
+    const hasil = await siap();
+    expect(statusLangkah(hasil).menu).toBe('selesai');
+    expect(hasil.kasir.kurang).toEqual(['perangkat']);
+    // Menu milik Merek, jadi semua Outlet Merek itu ikut tercentang.
+    expect(statusLangkah(await siap(outletDua)).menu).toBe('selesai');
+
+    await pemilik.patch(`/v1/menu/${menu}`, { aktif: false }).expect(200);
+    expect(statusLangkah(await siap()).menu).toBe('belum');
+  });
+
+  it('langkah Stasiun tercentang setelah Outlet punya Stasiun', async () => {
+    const pemilik = await dunia.daftarTenant();
+    const outletDua = await pemilik.tambahOutlet();
+    await pemilik.buatStasiun('Dapur');
+    const siap = async (o: string) => statusLangkah((await pemilik.get(`/v1/outlet/${o}/siap-jualan`).expect(200)).body);
+    expect((await siap(pemilik.outletId)).stasiun).toBe('selesai');
+    expect((await siap(outletDua)).stasiun).toBe('belum');
+  });
+
   it('dashboard menampilkan checklist untuk setiap Outlet', async () => {
     const pemilik = await dunia.daftarTenant();
     await pemilik.tambahOutlet({ nama: 'Cabang Dua' });

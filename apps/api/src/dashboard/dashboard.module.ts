@@ -3,6 +3,8 @@ import { and, asc, eq } from 'drizzle-orm';
 import { Database, type TxDb } from '../database/database';
 import { outlet, siapJualanDilewati, tenant } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
+import { adaMenuAktif } from '../menu/menu-outlet.controller';
+import { adaStasiun } from '../menu/stasiun.controller';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
 import { hariIni, tidakDitemukan, tidakValid } from '../umum/validasi';
 
@@ -32,8 +34,8 @@ export const WAJIB_UNTUK_KASIR: readonly LangkahSiapJualan[] = ['menu', 'profil_
 const PEMERIKSA: Record<LangkahSiapJualan, (tx: TxDb, o: BarisOutlet) => Promise<boolean>> = {
   profil_outlet: async (_tx, o) => Boolean(o.alamat) && (o.jamBuka?.length ?? 0) > 0,
   profil_pajak: async (tx, o) => (await profilPajakBerlaku(tx, o.id, hariIni())) !== undefined,
-  menu: async () => false,
-  stasiun: async () => false,
+  menu: (tx, o) => adaMenuAktif(tx, o),
+  stasiun: (tx, o) => adaStasiun(tx, o.id),
   metode_bayar: async () => false,
   meja: async () => false,
   karyawan: async () => false,

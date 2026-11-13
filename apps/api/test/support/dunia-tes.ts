@@ -65,6 +65,22 @@ export interface PemilikTes extends PenggunaMasuk {
   tambahOutlet(data?: { nama?: string; kota?: string }): Promise<string>;
   /** Dirikan Tenant lain untuk Pengguna yang sama (belum dipilih sebagai Tenant aktif). */
   dirikanTenantLain(data?: { namaUsaha?: string; kota?: string }): Promise<string>;
+  /** Buat Kategori di Merek default; mengembalikan ID-nya. */
+  buatKategori(data?: { nama?: string; warna?: string; ikon?: string }): Promise<string>;
+  /** Buat Menu di Merek default (tanpa `kategoriId` dibuatkan Kategori baru); mengembalikan ID-nya. */
+  buatMenu(data: DataMenuTes): Promise<string>;
+  /** Buat Stasiun di Outlet (default Outlet pertama); mengembalikan ID-nya. */
+  buatStasiun(nama: string, outletId?: string): Promise<string>;
+}
+
+/** Isi Menu untuk `buatMenu`; bentuknya sama dengan body `POST /v1/merek/:merekId/menu`. */
+export interface DataMenuTes {
+  nama: string;
+  harga: number;
+  kategoriId?: string;
+  bebasPajak?: boolean;
+  varian?: { nama: string; harga: number }[];
+  grupPilihan?: { nama: string; minimum?: number; maksimum: number; pilihan: { nama: string; harga: number }[] }[];
 }
 
 let nomor = 0;
@@ -114,6 +130,12 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
     const pengguna = await masuk(alamat, kataSandi);
     const merekId: string = (await pengguna.get('/v1/merek').expect(200)).body[0].id;
     const outletId: string = (await pengguna.get('/v1/outlet').expect(200)).body[0].id;
+    const buatKategori: PemilikTes['buatKategori'] = async (d = {}) => {
+      const res = await pengguna
+        .post(`/v1/merek/${merekId}/kategori`, { nama: d.nama ?? 'Kategori Tes', warna: d.warna ?? 'mint', ikon: d.ikon })
+        .expect(201);
+      return res.body.id as string;
+    };
     return {
       ...pengguna,
       kataSandi,
@@ -128,6 +150,16 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
         const res = await pengguna
           .post('/v1/tenant', { namaUsaha: d.namaUsaha ?? 'Usaha Kedua', kota: d.kota ?? 'Surabaya' })
           .expect(201);
+        return res.body.id as string;
+      },
+      buatKategori,
+      async buatMenu(d) {
+        const kategoriId = d.kategoriId ?? (await buatKategori());
+        const res = await pengguna.post(`/v1/merek/${merekId}/menu`, { ...d, kategoriId }).expect(201);
+        return res.body.id as string;
+      },
+      async buatStasiun(nama, o = outletId) {
+        const res = await pengguna.post(`/v1/outlet/${o}/stasiun`, { nama }).expect(201);
         return res.body.id as string;
       },
     };

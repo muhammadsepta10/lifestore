@@ -10,6 +10,14 @@ describe('Isolasi Tenant lewat API', () => {
   let a: PemilikTes;
   let b: PemilikTes;
   let outletKeduaB: string;
+  // Menu Tenant B
+  let kategoriB: string;
+  let menuB: string;
+  let varianB: string;
+  let pilihanB: string;
+  let stasiunB: string;
+  // Menu Tenant A, untuk mencoba mereferensikan ID Tenant B
+  let menuA: string;
 
   beforeAll(async () => {
     dunia = await buatDuniaTes();
@@ -20,6 +28,24 @@ describe('Isolasi Tenant lewat API', () => {
       .post(`/v1/outlet/${b.outletId}/profil-pajak`, { berlakuMulai: '2030-01-01', jenis: 'PPN', tarifPersen: 11 })
       .expect(201);
     await b.post(`/v1/outlet/${b.outletId}/siap-jualan/meja/lewati`).expect(200);
+
+    kategoriB = await b.buatKategori({ nama: 'Kategori Warung B' });
+    menuB = await b.buatMenu({
+      kategoriId: kategoriB,
+      nama: 'Menu Warung B',
+      harga: 10000,
+      varian: [{ nama: 'Varian Warung B', harga: 10000 }],
+      grupPilihan: [{ nama: 'Grup Warung B', maksimum: 1, pilihan: [{ nama: 'Pilihan Warung B', harga: 0 }] }],
+    });
+    const detailB = (await b.get(`/v1/menu/${menuB}`).expect(200)).body;
+    varianB = detailB.varian[0].id;
+    pilihanB = detailB.grupPilihan[0].pilihan[0].id;
+    stasiunB = await b.buatStasiun('Stasiun Warung B');
+    await b.put(`/v1/outlet/${b.outletId}/menu/${menuB}/stasiun`, { stasiunId: stasiunB }).expect(200);
+    await b.put(`/v1/outlet/${b.outletId}/menu/${menuB}/harga`, { harga: 12000 }).expect(200);
+    await b.put(`/v1/outlet/${b.outletId}/menu/${menuB}/habis`, { habis: true }).expect(200);
+
+    menuA = await a.buatMenu({ nama: 'Menu Warung A', harga: 5000 });
   });
   afterAll(() => dunia?.tutup());
 
@@ -31,6 +57,10 @@ describe('Isolasi Tenant lewat API', () => {
       pajak: (await b.get(`/v1/outlet/${b.outletId}/profil-pajak/riwayat`).expect(200)).body,
       audit: (await b.get('/v1/log-audit').expect(200)).body,
       dashboard: (await b.get('/v1/dashboard').expect(200)).body,
+      kategori: (await b.get(`/v1/merek/${b.merekId}/kategori`).expect(200)).body,
+      menu: (await b.get(`/v1/merek/${b.merekId}/menu`).expect(200)).body,
+      menuOutlet: (await b.get(`/v1/outlet/${b.outletId}/menu`).expect(200)).body,
+      stasiun: (await b.get(`/v1/outlet/${b.outletId}/stasiun`).expect(200)).body,
     };
   }
 
@@ -43,6 +73,11 @@ describe('Isolasi Tenant lewat API', () => {
     const dashboard = (await a.get('/v1/dashboard').expect(200)).body;
     expect(dashboard.tenant).toEqual({ id: a.tenantId, nama: 'Warung A' });
     expect(dashboard.outlet.map((o: { id: string }) => o.id)).toEqual([a.outletId]);
+    const menuA_ = (await a.get(`/v1/merek/${a.merekId}/menu`).expect(200)).body;
+    expect(menuA_.map((m: { id: string }) => m.id)).toEqual([menuA]);
+    expect(JSON.stringify((await a.get(`/v1/merek/${a.merekId}/kategori`).expect(200)).body)).not.toContain('Warung B');
+    expect(JSON.stringify((await a.get(`/v1/outlet/${a.outletId}/menu`).expect(200)).body)).not.toContain('Warung B');
+    expect((await a.get(`/v1/outlet/${a.outletId}/stasiun`).expect(200)).body).toEqual([]);
   });
 
   it('Tenant A tidak bisa membaca data Tenant B dengan ID yang diketahui', async () => {
@@ -53,6 +88,11 @@ describe('Isolasi Tenant lewat API', () => {
       `/v1/outlet/${b.outletId}/profil-pajak?tanggal=2030-06-01`,
       `/v1/outlet/${b.outletId}/profil-pajak/riwayat`,
       `/v1/outlet/${b.outletId}/siap-jualan`,
+      `/v1/merek/${b.merekId}/kategori`,
+      `/v1/merek/${b.merekId}/menu`,
+      `/v1/menu/${menuB}`,
+      `/v1/outlet/${b.outletId}/menu`,
+      `/v1/outlet/${b.outletId}/stasiun`,
     ]) {
       const res = await a.get(path);
       expect({ path, status: res.status }).toEqual({ path, status: 404 });
@@ -69,10 +109,31 @@ describe('Isolasi Tenant lewat API', () => {
       () => a.post(`/v1/outlet/${b.outletId}/profil-pajak`, { berlakuMulai: '2026-01-01', jenis: 'PBJT', tarifPersen: 99 }),
       () => a.post(`/v1/outlet/${b.outletId}/siap-jualan/menu/lewati`),
       () => a.delete(`/v1/outlet/${b.outletId}/siap-jualan/meja/lewati`),
+      // Menu Tenant B
+      () => a.post(`/v1/merek/${b.merekId}/kategori`, { nama: 'Selundupan', warna: 'mint' }),
+      () => a.patch(`/v1/kategori/${kategoriB}`, { nama: 'Diretas' }),
+      () => a.put(`/v1/merek/${b.merekId}/kategori/urutan`, { ids: [kategoriB] }),
+      () => a.post(`/v1/merek/${b.merekId}/menu`, { kategoriId: kategoriB, nama: 'Selundupan', harga: 1 }),
+      () => a.patch(`/v1/menu/${menuB}`, { nama: 'Diretas', harga: 1, aktif: false }),
+      () => a.put(`/v1/merek/${b.merekId}/menu/urutan`, { ids: [menuB] }),
+      () => a.post(`/v1/outlet/${b.outletId}/stasiun`, { nama: 'Selundupan' }),
+      () => a.patch(`/v1/stasiun/${stasiunB}`, { nama: 'Diretas' }),
+      () => a.put(`/v1/outlet/${b.outletId}/menu/${menuB}/stasiun`, { stasiunId: null }),
+      () => a.put(`/v1/outlet/${b.outletId}/menu/${menuB}/harga`, { harga: 1 }),
+      () => a.put(`/v1/outlet/${b.outletId}/menu/${menuB}/habis`, { habis: false }),
+      // ID Tenant B dipakai sebagai referensi dari data Tenant A sendiri
+      () => a.post(`/v1/merek/${a.merekId}/menu`, { kategoriId: kategoriB, nama: 'Selundupan', harga: 1 }),
+      () => a.patch(`/v1/menu/${menuA}`, { kategoriId: kategoriB }),
+      () => a.put(`/v1/merek/${a.merekId}/menu/urutan`, { ids: [menuA, menuB] }),
+      () => a.put(`/v1/outlet/${a.outletId}/menu/${menuA}/stasiun`, { stasiunId: stasiunB }),
+      () => a.put(`/v1/outlet/${a.outletId}/menu/${menuB}/habis`, { habis: true }),
+      () => a.put(`/v1/outlet/${a.outletId}/menu/${menuA}/harga`, { varian: [{ varianId: varianB, harga: 1 }] }),
+      () => a.patch(`/v1/menu/${menuA}`, { varian: [{ id: varianB, nama: 'Curian', harga: 1 }] }),
+      () => a.patch(`/v1/menu/${menuA}`, { grupPilihan: [{ nama: 'G', maksimum: 1, pilihan: [{ id: pilihanB, nama: 'Curian', harga: 1 }] }] }),
     ];
-    for (const coba of percobaan) {
+    for (const [i, coba] of percobaan.entries()) {
       const res = await coba();
-      expect(res.status).toBe(404);
+      expect({ percobaan: i, status: res.status }).toEqual({ percobaan: i, status: 404 });
     }
     expect(await dataB()).toEqual(sebelum);
     // Tidak ada yang bocor ke Tenant A juga.
@@ -85,6 +146,11 @@ describe('Isolasi Tenant lewat API', () => {
       expect((await a.get(`/v1/outlet/${enc}`)).status).toBe(404);
       expect((await a.patch(`/v1/merek/${enc}`, { nama: 'x' })).status).toBe(404);
       expect((await a.get(`/v1/outlet/${enc}/profil-pajak`)).status).toBe(404);
+      expect((await a.get(`/v1/menu/${enc}`)).status).toBe(404);
+      expect((await a.patch(`/v1/kategori/${enc}`, { nama: 'x' })).status).toBe(404);
+      expect((await a.patch(`/v1/stasiun/${enc}`, { nama: 'x' })).status).toBe(404);
+      expect((await a.get(`/v1/merek/${enc}/menu`)).status).toBe(404);
+      expect((await a.put(`/v1/outlet/${a.outletId}/menu/${enc}/habis`, { habis: true })).status).toBe(404);
     }
   });
 

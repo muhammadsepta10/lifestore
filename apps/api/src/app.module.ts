@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module';
 import { EmailModule } from './email/email.module';
 import { IdentitasModule } from './identitas/identitas.module';
 import { KesehatanModule } from './kesehatan/kesehatan.module';
+import { MenuModule } from './menu/menu.module';
 import type { KonfigurasiApi } from './konfigurasi';
 import { PajakModule } from './pajak/pajak.module';
 import { UsahaModule } from './usaha/usaha.module';
@@ -22,6 +23,7 @@ export class AppModule {
         IdentitasModule,
         UsahaModule,
         PajakModule,
+        MenuModule,
         DashboardModule,
       ],
     };
