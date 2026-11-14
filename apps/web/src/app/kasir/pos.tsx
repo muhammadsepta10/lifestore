@@ -346,7 +346,7 @@ export function PanelPesanan({
     <aside className="order kartu" aria-label={k.pesananSaatIni} data-tagihan={tagihan.id}>
       <div className="ohead">
         <div>
-          <h3>{tagihan.namaPelanggan ?? p.tanpaNama}</h3>
+          <h3>{tagihan.namaPelanggan ?? (tagihan.meja.length > 0 ? k.dineIn.meja(tagihan.meja.map((m) => m.label).join(' + ')) : p.tanpaNama)}</h3>
           <small>{tagihan.pesanan.length > 0 ? tagihan.pesanan.map((x) => x.nomorPesanan).join(' · ') : p.belumAdaPesanan}</small>
         </div>
         <span className="pil info">
