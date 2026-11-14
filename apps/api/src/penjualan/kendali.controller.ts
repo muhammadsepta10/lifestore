@@ -2,14 +2,14 @@ import { Body, Controller, Delete, ForbiddenException, HttpCode, Param, Post, Pu
 import { and, eq } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import { Database } from '../database/database';
-import { itemPesanan, kejadianItemPesanan, pembayaran, tagihan } from '../database/schema';
+import { kejadianItemPesanan, pembayaran, tagihan } from '../database/schema';
 import { type Pelaku, PelakuAktif, PERAN_PEMILIK, PerluIzin, punyaIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { type BuktiPersetujuan, buktiPersetujuanDari, PersetujuanAtasan } from '../karyawan/persetujuan-atasan';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
 import { angka, ditolak, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
-import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
+import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, pelakuAudit, pernahBerisiItem, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 /**
  * Batas Diskon Manual (persen dari subtotal) per Peran. Di atas batas butuh Persetujuan Atasan
@@ -49,10 +49,6 @@ export class KendaliController {
     private readonly persetujuan: PersetujuanAtasan,
     private readonly audit: PenulisLogAudit,
   ) {}
-
-  private pelakuAudit(pelaku: Pelaku, p: PerangkatAktif) {
-    return { penggunaId: pelaku.penggunaId, anggotaId: pelaku.anggotaId, perangkatId: p.id };
-  }
 
   /**
    * Diskon Manual sebesar `persen` dari subtotal oleh Pelaku: dalam batas Perannya tidak butuh
@@ -119,7 +115,7 @@ export class KendaliController {
       entitas: 'item_pesanan',
       entitasId: item.id,
       outletId: p.outletId,
-      pelaku: this.pelakuAudit(pelaku, p),
+      pelaku: pelakuAudit(pelaku, p),
       sebelum: { status: item.status },
       sesudah: { status: 'batal', waste: sudahDimasak, tagihanId: t.id, nama: item.nama, jumlah: item.jumlah },
       alasan,
@@ -139,8 +135,7 @@ export class KendaliController {
     const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });
     if (t.status === 'batal') return tagihanLengkap(tx, t);
     if (t.status !== 'terbuka') throw tagihanSudahDitutup();
-    const [berisi] = await tx.select({ id: itemPesanan.id }).from(itemPesanan).where(eq(itemPesanan.tagihanId, t.id)).limit(1);
-    if (berisi) throw ditolak('tagihan_berisi_item', 'Tagihan yang sudah berisi item tidak bisa dihapus, hanya di-void dengan Persetujuan Atasan.');
+    if (await pernahBerisiItem(tx, t.id)) throw ditolak('tagihan_berisi_item', 'Tagihan yang sudah berisi item tidak bisa dihapus, hanya di-void dengan Persetujuan Atasan.');
     const [dibatalkan] = await tx
       .update(tagihan)
       .set({ status: 'batal', ditutupPada: this.jam.sekarang(), ditutupOlehAnggotaId: pelaku.anggotaId })
@@ -151,7 +146,7 @@ export class KendaliController {
       entitas: 'tagihan',
       entitasId: t.id,
       outletId: p.outletId,
-      pelaku: this.pelakuAudit(pelaku, p),
+      pelaku: pelakuAudit(pelaku, p),
       sebelum: { status: 'terbuka' },
       sesudah: { status: 'batal' },
     });
@@ -219,7 +214,7 @@ export class KendaliController {
       entitas: 'tagihan',
       entitasId: t.id,
       outletId: p.outletId,
-      pelaku: this.pelakuAudit(pelaku, p),
+      pelaku: pelakuAudit(pelaku, p),
       sebelum: { status: 'terbuka', total: rincian.total, jumlahItem: item.length },
       sesudah: { status: 'void', itemWaste: dibatalkan.filter((i) => !belumDimasak(i.status)).length },
       alasan,
@@ -264,7 +259,7 @@ export class KendaliController {
       entitas: 'tagihan',
       entitasId: t.id,
       outletId: p.outletId,
-      pelaku: this.pelakuAudit(pelaku, p),
+      pelaku: pelakuAudit(pelaku, p),
       sebelum: lama ? { jenis: lama.jenis, nilai: lama.nilai } : null,
       sesudah: { jenis, nilai, diskon: rincianTagihan(diubah!, item).diskon, subtotal, batasPersen },
       alasan,
@@ -292,7 +287,7 @@ export class KendaliController {
       entitas: 'tagihan',
       entitasId: t.id,
       outletId: p.outletId,
-      pelaku: this.pelakuAudit(pelaku, p),
+      pelaku: pelakuAudit(pelaku, p),
       sebelum: { jenis: lama.jenis, nilai: lama.nilai },
       sesudah: null,
       alasan: lama.alasan,
@@ -331,7 +326,7 @@ export class LaciController {
       entitas: 'perangkat',
       entitasId: p.id,
       outletId: p.outletId,
-      pelaku: { penggunaId: pelaku.penggunaId, anggotaId: pelaku.anggotaId, perangkatId: p.id },
+      pelaku: pelakuAudit(pelaku, p),
       sesudah: { shiftId, dibukaPada },
       alasan,
       penyetujuAnggotaId,

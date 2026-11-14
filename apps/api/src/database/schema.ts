@@ -716,6 +716,7 @@ export const pesanan = pgTable(
 /**
  * Item Pesanan: salinan Menu (nama, Varian, harga, pilihan, bebas pajak, Stasiun) saat dikirim.
  * Append-only dan tidak pernah diubah; status dapurnya ada di `kejadian_item_pesanan`.
+ * `tagihanId` = Tagihan saat dikirim; perpindahan sesudahnya ada di `pemindahan_item_pesanan`.
  * `varianId` dan pilihan sengaja tanpa FK: Varian/pilihan bisa dihapus dari Menu.
  */
 export const itemPesanan = pgTable(
@@ -776,6 +777,65 @@ export const kejadianItemPesanan = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index().on(t.tenantId), index().on(t.itemPesananId, t.urutan), index().on(t.outletId, t.urutan)],
+);
+
+/**
+ * Kejadian pindah Item Pesanan ke Tagihan lain (Pisah Tagihan, gabung Meja). Append-only: Tagihan
+ * sebuah Item Pesanan saat ini = `keTagihanId` kejadian terakhirnya, atau `item_pesanan.tagihan_id`
+ * bila belum pernah pindah.
+ */
+export const pemindahanItemPesanan = pgTable(
+  'pemindahan_item_pesanan',
+  {
+    id: id(),
+    tenantId: tenantId(),
+    urutan: bigint({ mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    itemPesananId: text()
+      .notNull()
+      .references(() => itemPesanan.id),
+    dariTagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    keTagihanId: text()
+      .notNull()
+      .references(() => tagihan.id),
+    sebab: text().$type<'pisah_tagihan' | 'gabung_meja'>().notNull(),
+    anggotaId: text()
+      .notNull()
+      .references(() => anggota.id),
+    perangkatId: text()
+      .notNull()
+      .references(() => perangkatTerdaftar.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId), index().on(t.itemPesananId, t.urutan), index().on(t.keTagihanId)],
+);
+
+/**
+ * Perintah kasir yang sudah dijalankan, dikenali dari `id` buatan klien (kunci idempoten), untuk
+ * perintah yang tidak membuat baris ber-ID klien sendiri: void, Diskon Manual, pindah/gabung Meja,
+ * tutup Shift, buka laci. Kiriman ulang dengan `id` yang sama tidak dijalankan dua kali. Append-only.
+ */
+export const perintahKlien = pgTable(
+  'perintah_klien',
+  {
+    id: text().primaryKey(),
+    tenantId: tenantId(),
+    outletId: text()
+      .notNull()
+      .references(() => outlet.id),
+    /** Nama perintah, misal `void_tagihan`. */
+    jenis: text().notNull(),
+    /** Entitas sasaran perintah (ID Tagihan, Shift, atau perangkat untuk buka laci). */
+    entitasId: text().notNull(),
+    /** Jawaban perintah yang tidak bisa dibaca ulang dari data (buka laci). */
+    hasil: jsonb(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.tenantId)],
 );
 
 /**

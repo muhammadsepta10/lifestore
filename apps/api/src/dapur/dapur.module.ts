@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Injectable, Module, type OnModuleDestroy, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { and, asc, eq, gt, gte, inArray, max, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, max } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import { Database, type TxDb } from '../database/database';
 import type { KonteksTenant } from '../database/konteks-tenant';
@@ -7,7 +7,7 @@ import { itemPesanan, kejadianItemPesanan, pesanan, stasiun, tagihan } from '../
 import { type Pelaku, PelakuAktif, pastikanIzin, PerluIzin, punyaIzin, SemuaAnggota, tidakBerizin } from '../izin/izin';
 import { KaryawanModule } from '../karyawan/karyawan.module';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
-import { statusPesanan, type StatusItemPesanan } from '../penjualan/tagihan';
+import { kejadianTerakhir, statusItemPesanan, statusPesanan, type StatusItemPesanan, tagihanSetelahPindah } from '../penjualan/tagihan';
 import { Jam } from '../umum/jam';
 import { objek, pilihan, tidakDitemukan, tidakValid } from '../umum/validasi';
 
@@ -49,32 +49,29 @@ interface ItemDapur {
 /** Item Pesanan Outlet dari Pesanan sehari terakhir, dengan status dapur terkininya, urut kiriman. */
 async function itemDapur(tx: TxDb, outletId: string, sekarang: Date): Promise<ItemDapur[]> {
   const baris = await tx
-    .select({ i: itemPesanan, p: pesanan, t: { kanal: tagihan.kanal, namaPelanggan: tagihan.namaPelanggan, mejaId: tagihan.mejaId } })
+    .select({ i: itemPesanan, p: pesanan })
     .from(itemPesanan)
     .innerJoin(pesanan, eq(pesanan.id, itemPesanan.pesananId))
-    .innerJoin(tagihan, eq(tagihan.id, itemPesanan.tagihanId))
     .where(and(eq(itemPesanan.outletId, outletId), gte(pesanan.dikirimPada, new Date(sekarang.getTime() - JENDELA_PESANAN_MS))))
     .orderBy(asc(pesanan.dikirimPada), asc(pesanan.nomorPesanan), asc(itemPesanan.urutan));
   if (baris.length === 0) return [];
-  const terakhir = await tx
-    .selectDistinctOn([kejadianItemPesanan.itemPesananId], {
-      itemPesananId: kejadianItemPesanan.itemPesananId,
-      status: kejadianItemPesanan.status,
-      pada: kejadianItemPesanan.createdAt,
-    })
-    .from(kejadianItemPesanan)
-    .where(
-      inArray(
-        kejadianItemPesanan.itemPesananId,
-        baris.map((b) => b.i.id),
-      ),
-    )
-    .orderBy(kejadianItemPesanan.itemPesananId, sql`${kejadianItemPesanan.urutan} desc`);
-  const status = new Map(terakhir.map((k) => [k.itemPesananId, k]));
-  return baris.map(({ i, p, t }) => ({
+  const itemIds = baris.map((b) => b.i.id);
+  const status = await kejadianTerakhir(tx, itemIds);
+  // Item yang pindah Tagihan (Pisah Tagihan, gabung Meja) tampil dengan Tagihannya sekarang.
+  const pindah = await tagihanSetelahPindah(tx, itemIds);
+  const tagihanItem = (i: { id: string; tagihanId: string }) => pindah.get(i.id) ?? i.tagihanId;
+  const tagihannya = new Map(
+    (
+      await tx
+        .select({ id: tagihan.id, kanal: tagihan.kanal, namaPelanggan: tagihan.namaPelanggan, mejaId: tagihan.mejaId })
+        .from(tagihan)
+        .where(inArray(tagihan.id, [...new Set(baris.map((b) => tagihanItem(b.i)))]))
+    ).map((t) => [t.id, t]),
+  );
+  return baris.map(({ i, p }) => ({ i, p, t: tagihannya.get(tagihanItem(i))! })).map(({ i, p, t }) => ({
     id: i.id,
     pesananId: p.id,
-    tagihanId: i.tagihanId,
+    tagihanId: t.id,
     nomorPesanan: p.nomorPesanan,
     dikirimPada: p.dikirimPada,
     kanal: t.kanal,
@@ -272,15 +269,16 @@ export class KdsController {
       .from(itemPesanan)
       .where(and(inArray(itemPesanan.id, itemIds), eq(itemPesanan.outletId, p.outletId)));
     if (item.length !== itemIds.length) throw tidakDitemukan('Item Pesanan');
+    const pindah = await tagihanSetelahPindah(tx, itemIds);
     // Kunci Tagihan-nya (urut ID supaya tidak saling mengunci): perubahan status dan pembatalan
     // untuk item yang sama antre di sini.
     await tx
       .select({ id: tagihan.id })
       .from(tagihan)
-      .where(inArray(tagihan.id, [...new Set(item.map((i) => i.tagihanId))]))
+      .where(inArray(tagihan.id, [...new Set(item.map((i) => pindah.get(i.id) ?? i.tagihanId))]))
       .orderBy(asc(tagihan.id))
       .for('update');
-    const kini = await statusTerkini(tx, itemIds);
+    const kini = await statusItemPesanan(tx, itemIds);
     const maju = itemIds.filter((id) => {
       const s = kini.get(id) ?? 'menunggu';
       // Item batal dilewati; item yang ditahan (Outlet bayar-dulu) belum masuk dapur sampai Tagihannya lunas.
@@ -298,15 +296,6 @@ export class KdsController {
 async function urutanTerakhir(tx: TxDb, outletId: string): Promise<number> {
   const [b] = await tx.select({ n: max(kejadianItemPesanan.urutan) }).from(kejadianItemPesanan).where(eq(kejadianItemPesanan.outletId, outletId));
   return b?.n ?? 0;
-}
-
-async function statusTerkini(tx: TxDb, itemIds: string[]): Promise<Map<string, StatusItemPesanan>> {
-  const baris = await tx
-    .selectDistinctOn([kejadianItemPesanan.itemPesananId], { itemPesananId: kejadianItemPesanan.itemPesananId, status: kejadianItemPesanan.status })
-    .from(kejadianItemPesanan)
-    .where(inArray(kejadianItemPesanan.itemPesananId, itemIds))
-    .orderBy(kejadianItemPesanan.itemPesananId, sql`${kejadianItemPesanan.urutan} desc`);
-  return new Map(baris.map((b) => [b.itemPesananId, b.status]));
 }
 
 /** Siap Diambil di kasir: Pesanan bawa pulang yang semua itemnya siap dan menunggu diambil pelanggan. */

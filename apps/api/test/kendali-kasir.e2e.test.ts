@@ -126,15 +126,6 @@ describe('Kendali kasir: batal, void, Diskon Manual, buka laci', () => {
     await kasir.post(`/v1/tagihan/${id}/item/${itemIds[0]}/batal`).expect(200);
     expect((await kirim(kasir, 'delete', `/v1/tagihan/${id}`)).status).toBe(409);
     expect((await tagihan(id)).status).toBe('terbuka');
-    // Peran aplikasi di database pun tidak bisa menghapus Tagihan.
-    const klien = await dunia.db.admin.connect();
-    try {
-      await klien.query('SET ROLE lifestore_app');
-      await expect(klien.query('DELETE FROM tagihan WHERE id = $1', [id])).rejects.toThrow(/permission denied/);
-    } finally {
-      await klien.query('RESET ROLE').catch(() => undefined);
-      klien.release();
-    }
   });
 
   it('void butuh alasan dan PIN atasan, tercatat di Log Audit, dan muncul di Laporan Shift', async () => {

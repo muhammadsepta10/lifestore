@@ -113,6 +113,20 @@
       "when": 1794633921984,
       "tag": "0015_rls_dinein",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794652208005,
+      "tag": "0016_jejak_pindah_perintah",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794652209192,
+      "tag": "0017_rls_jejak_pindah_perintah",
+      "breakpoints": true
     }
   ]
 }

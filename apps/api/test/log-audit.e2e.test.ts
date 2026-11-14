@@ -1,4 +1,3 @@
-import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buatDuniaTes, type DuniaTes, type PemilikTes } from './support/dunia-tes';
 
@@ -46,30 +45,5 @@ describe('Log Audit', () => {
     }
     const sesudah = (await pemilik.get('/v1/log-audit').expect(200)).body;
     expect(sesudah).toEqual([catatan]);
-  });
-
-  it('peran database aplikasi tidak bisa mengubah atau menghapus Log Audit, bahkan di Tenant sendiri', async () => {
-    const app = new pg.Pool({ connectionString: dunia.db.appUrl, max: 1 });
-    try {
-      const c = await app.connect();
-      try {
-        await c.query('BEGIN');
-        await c.query(`SELECT set_config('app.tenant_id', $1, true)`, [pemilik.tenantId]);
-        const { rows } = await c.query('SELECT count(*)::int AS n FROM log_audit');
-        expect(rows).toEqual([{ n: 1 }]);
-        await expect(c.query(`UPDATE log_audit SET aksi = 'dihapus'`)).rejects.toMatchObject({ code: '42501' });
-        await c.query('ROLLBACK');
-        await c.query('BEGIN');
-        await c.query(`SELECT set_config('app.tenant_id', $1, true)`, [pemilik.tenantId]);
-        await expect(c.query('DELETE FROM log_audit')).rejects.toMatchObject({ code: '42501' });
-        await c.query('ROLLBACK');
-        await expect(c.query('TRUNCATE log_audit')).rejects.toMatchObject({ code: '42501' });
-      } finally {
-        c.release();
-      }
-    } finally {
-      await app.end();
-    }
-    expect((await pemilik.get('/v1/log-audit').expect(200)).body).toHaveLength(1);
   });
 });

@@ -1,8 +1,8 @@
 import { ConflictException } from '@nestjs/common';
 import { hitungTagihan, type Kanal, type RincianTagihan } from '@lifestore/domain';
-import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
 import type { TxDb } from '../database/database';
-import { itemPesanan, kejadianItemPesanan, meja, pembayaran, pesanan, tagihan, tagihanMeja } from '../database/schema';
+import { itemPesanan, kejadianItemPesanan, meja, pembayaran, pemindahanItemPesanan, pesanan, tagihan, tagihanMeja } from '../database/schema';
 import { type Masukan, teks, tidakDitemukan } from '../umum/validasi';
 
 /**
@@ -51,6 +51,11 @@ export async function pastikanTotalDiAtasDibayar(tx: TxDb, tagihanId: string, to
   }
 }
 
+/** Pelaku perintah kasir untuk Log Audit: Anggota yang masuk PIN di Perangkat Terdaftar itu. */
+export function pelakuAudit(pelaku: { penggunaId: string | null; anggotaId: string }, p: { id: string }) {
+  return { penggunaId: pelaku.penggunaId, anggotaId: pelaku.anggotaId, perangkatId: p.id };
+}
+
 export function tagihanSudahDitutup(): ConflictException {
   return new ConflictException({ kode: 'tagihan_sudah_ditutup', pesan: 'Tagihan ini sudah ditutup.' });
 }
@@ -69,34 +74,109 @@ export async function tagihanDiOutlet(tx: TxDb, outletId: string, id: string, op
   return t;
 }
 
-/** Status dapur terkini setiap Item Pesanan: kejadian terakhirnya. */
-export async function statusItemPesanan(tx: TxDb, itemIds: string[]): Promise<Map<string, StatusItemPesanan>> {
+/** Kejadian status terakhir setiap Item Pesanan: status dapur terkininya dan kapan dicatat. */
+export async function kejadianTerakhir(tx: TxDb, itemIds: string[]): Promise<Map<string, { status: StatusItemPesanan; pada: Date }>> {
   if (itemIds.length === 0) return new Map();
   const baris = await tx
-    .selectDistinctOn([kejadianItemPesanan.itemPesananId], { itemPesananId: kejadianItemPesanan.itemPesananId, status: kejadianItemPesanan.status })
+    .selectDistinctOn([kejadianItemPesanan.itemPesananId], {
+      itemPesananId: kejadianItemPesanan.itemPesananId,
+      status: kejadianItemPesanan.status,
+      pada: kejadianItemPesanan.createdAt,
+    })
     .from(kejadianItemPesanan)
     .where(inArray(kejadianItemPesanan.itemPesananId, itemIds))
     .orderBy(kejadianItemPesanan.itemPesananId, sql`${kejadianItemPesanan.urutan} desc`);
-  return new Map(baris.map((b) => [b.itemPesananId, b.status]));
+  return new Map(baris.map((b) => [b.itemPesananId, { status: b.status, pada: b.pada }]));
+}
+
+/** Status dapur terkini setiap Item Pesanan. */
+export async function statusItemPesanan(tx: TxDb, itemIds: string[]): Promise<Map<string, StatusItemPesanan>> {
+  return new Map([...(await kejadianTerakhir(tx, itemIds))].map(([id, k]) => [id, k.status]));
+}
+
+/**
+ * Tagihan tempat Item Pesanan berada sekarang, untuk item yang pernah pindah (Pisah Tagihan,
+ * gabung Meja): `keTagihanId` kejadian pindah terakhirnya. Item yang tidak ada di hasil masih di
+ * Tagihan asalnya (`item_pesanan.tagihan_id`).
+ */
+export async function tagihanSetelahPindah(tx: TxDb, itemIds: string[]): Promise<Map<string, string>> {
+  if (itemIds.length === 0) return new Map();
+  const baris = await tx
+    .selectDistinctOn([pemindahanItemPesanan.itemPesananId], { itemPesananId: pemindahanItemPesanan.itemPesananId, tagihanId: pemindahanItemPesanan.keTagihanId })
+    .from(pemindahanItemPesanan)
+    .where(inArray(pemindahanItemPesanan.itemPesananId, itemIds))
+    .orderBy(pemindahanItemPesanan.itemPesananId, sql`${pemindahanItemPesanan.urutan} desc`);
+  return new Map(baris.map((b) => [b.itemPesananId, b.tagihanId]));
+}
+
+/** Item Pesanan yang kejadian pindah terakhirnya menuju salah satu Tagihan ini: ID item → Tagihan itu. */
+async function itemPindahKe(tx: TxDb, tagihanIds: string[]): Promise<Map<string, string>> {
+  const calon = await tx
+    .selectDistinct({ itemPesananId: pemindahanItemPesanan.itemPesananId })
+    .from(pemindahanItemPesanan)
+    .where(inArray(pemindahanItemPesanan.keTagihanId, tagihanIds));
+  const kini = await tagihanSetelahPindah(
+    tx,
+    calon.map((c) => c.itemPesananId),
+  );
+  return new Map([...kini].filter(([, tagihanId]) => tagihanIds.includes(tagihanId)));
+}
+
+/** Catat kejadian pindah Item Pesanan ke Tagihan lain. Tagihan asal dan tujuan harus sudah dikunci pemanggil. */
+export async function pindahkanItem(
+  tx: TxDb,
+  item: readonly Pick<ItemBerstatus, 'id' | 'tagihanId'>[],
+  ke: Pick<BarisTagihan, 'id' | 'tenantId' | 'outletId'>,
+  oleh: { sebab: 'pisah_tagihan' | 'gabung_meja'; anggotaId: string; perangkatId: string },
+): Promise<void> {
+  if (item.length === 0) return;
+  await tx.insert(pemindahanItemPesanan).values(
+    item.map((i) => ({
+      tenantId: ke.tenantId,
+      outletId: ke.outletId,
+      itemPesananId: i.id,
+      dariTagihanId: i.tagihanId,
+      keTagihanId: ke.id,
+      sebab: oleh.sebab,
+      anggotaId: oleh.anggotaId,
+      perangkatId: oleh.perangkatId,
+    })),
+  );
+}
+
+/** Apakah Tagihan ini pernah berisi Item Pesanan (dikirim ke sini atau dipindahkan ke sini)? */
+export async function pernahBerisiItem(tx: TxDb, tagihanId: string): Promise<boolean> {
+  const [dikirim] = await tx.select({ id: itemPesanan.id }).from(itemPesanan).where(eq(itemPesanan.tagihanId, tagihanId)).limit(1);
+  if (dikirim) return true;
+  const [pindahan] = await tx.select({ id: pemindahanItemPesanan.id }).from(pemindahanItemPesanan).where(eq(pemindahanItemPesanan.keTagihanId, tagihanId)).limit(1);
+  return pindahan !== undefined;
 }
 
 export interface ItemBerstatus extends BarisItemPesanan {
   status: StatusItemPesanan;
 }
 
-/** Item Pesanan sebuah Tagihan beserta status dapurnya, urut kiriman. */
+/**
+ * Item Pesanan yang sekarang berada di Tagihan-Tagihan ini beserta status dapurnya, urut kiriman.
+ * `tagihanId` setiap item adalah Tagihannya saat ini (setelah Pisah Tagihan atau gabung Meja).
+ */
 export async function itemTagihan(tx: TxDb, tagihanIds: string[]): Promise<ItemBerstatus[]> {
   if (tagihanIds.length === 0) return [];
+  const pindahan = await itemPindahKe(tx, tagihanIds);
+  const belumPindah = and(
+    inArray(itemPesanan.tagihanId, tagihanIds),
+    notExists(tx.select({ id: pemindahanItemPesanan.id }).from(pemindahanItemPesanan).where(eq(pemindahanItemPesanan.itemPesananId, itemPesanan.id))),
+  );
   const baris = await tx
     .select()
     .from(itemPesanan)
-    .where(inArray(itemPesanan.tagihanId, tagihanIds))
+    .where(pindahan.size > 0 ? or(belumPindah, inArray(itemPesanan.id, [...pindahan.keys()])) : belumPindah)
     .orderBy(asc(itemPesanan.createdAt), asc(itemPesanan.pesananId), asc(itemPesanan.urutan));
   const status = await statusItemPesanan(
     tx,
     baris.map((b) => b.id),
   );
-  return baris.map((b) => ({ ...b, status: status.get(b.id) ?? STATUS_ITEM_AWAL }));
+  return baris.map((b) => ({ ...b, tagihanId: pindahan.get(b.id) ?? b.tagihanId, status: status.get(b.id) ?? STATUS_ITEM_AWAL }));
 }
 
 /** Hitung Tagihan dari Item Pesanan tersalin dan Profil Pajak yang tersalin di Tagihan. */

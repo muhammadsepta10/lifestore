@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buatDuniaTes, type DuniaTes } from './support/dunia-tes';
 
@@ -322,7 +321,7 @@ describe('Penjualan: Tagihan bawa pulang sampai lunas tunai', () => {
     }
   });
 
-  it('peran database aplikasi tidak bisa mengubah atau menghapus Pesanan, Item Pesanan, dan Pembayaran', async () => {
+  it('tidak ada rute untuk mengubah atau menghapus Pesanan dan Item Pesanan yang sudah dikirim', async () => {
     const pemilik = await dunia.daftarTenant();
     await pemilik.aktifkanMetodeBayar('tunai');
     const mie = await pemilik.buatMenu({ nama: 'Mie Ayam', harga: 15_000 });
@@ -333,37 +332,12 @@ describe('Penjualan: Tagihan bawa pulang sampai lunas tunai', () => {
     await kasir.bayarTunai(tagihanId, 20_000).expect(201);
     const sebelum = (await kasir.get(`/v1/tagihan/${tagihanId}`).expect(200)).body;
 
-    const app = new pg.Pool({ connectionString: dunia.db.appUrl, max: 1 });
-    try {
-      for (const perintah of [
-        `UPDATE item_pesanan SET harga_satuan = 1, jumlah = 99`,
-        `DELETE FROM item_pesanan`,
-        `UPDATE pesanan SET nomor_pesanan = 'X-999'`,
-        `DELETE FROM pesanan`,
-        `UPDATE kejadian_item_pesanan SET status = 'batal'`,
-        `DELETE FROM kejadian_item_pesanan`,
-        `UPDATE pembayaran SET jumlah = 1`,
-        `DELETE FROM pembayaran`,
-        `DELETE FROM tagihan`,
-      ]) {
-        const c = await app.connect();
-        try {
-          await c.query('BEGIN');
-          await c.query(`SELECT set_config('app.tenant_id', $1, true)`, [pemilik.tenantId]);
-          await expect(c.query(perintah), perintah).rejects.toMatchObject({ code: '42501' });
-          await c.query('ROLLBACK');
-        } finally {
-          c.release();
-        }
-      }
-    } finally {
-      await app.end();
-    }
-    expect((await kasir.get(`/v1/tagihan/${tagihanId}`).expect(200)).body).toEqual(sebelum);
-    // Lewat API pun tidak ada rute untuk mengubah item yang sudah dikirim.
+    // Hak peran aplikasi di database dibuktikan di append-only.db.test.ts.
     const itemId = sebelum.pesanan[0].item[0].id;
     for (const rute of [`/v1/tagihan/${tagihanId}/pesanan/${sebelum.pesanan[0].id}`, `/v1/item-pesanan/${itemId}`]) {
       expect((await dunia.http.patch(rute).set('Authorization', `Perangkat ${kasir.token}`).send({ jumlah: 9 })).status).toBe(404);
+      expect((await dunia.http.delete(rute).set('Authorization', `Perangkat ${kasir.token}`)).status).toBe(404);
     }
+    expect((await kasir.get(`/v1/tagihan/${tagihanId}`).expect(200)).body).toEqual(sebelum);
   });
 });

@@ -1,14 +1,15 @@
 import { Body, Controller, HttpCode, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { PenulisLogAudit } from '../audit/audit.module';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
-import { itemPesanan, pembayaran, tagihan, tagihanMeja } from '../database/schema';
+import { pembayaran, tagihan, tagihanMeja } from '../database/schema';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { Jam } from '../umum/jam';
 import { ditolak, objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
-import { type BarisTagihan, idDipakai, idKlien, itemTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
+import { type BarisTagihan, idDipakai, idKlien, itemTagihan, mejaTagihan, pelakuAudit, pindahkanItem, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 const MAKS_ITEM_PISAH = 500;
 
@@ -46,22 +47,40 @@ export class AturTagihanController {
   constructor(
     private readonly db: Database,
     private readonly jam: Jam,
+    private readonly audit: PenulisLogAudit,
   ) {}
+
+  /** ID Meja yang ditempati Tagihan, urut ditempati. */
+  private async mejaIds(tx: TxDb, tagihanId: string): Promise<string[]> {
+    return (await mejaTagihan(tx, [tagihanId])).map((m) => m.id);
+  }
 
   /** Pindah Tagihan ke Meja lain yang Kosong. Tagihannya tetap satu; Meja lama menjadi Kosong. */
   @Post('pindah-meja')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
-  async pindahMeja(@Perangkat() p: PerangkatAktif, @Param('tagihanId') tagihanId: string, @Body() body: unknown) {
+  async pindahMeja(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Param('tagihanId') tagihanId: string, @Body() body: unknown) {
     const mejaId = teks(objek(body), 'mejaId', { maks: 64 });
     const tx = this.db.tenant();
     const t = await tagihanDineInTerbuka(tx, p.outletId, tagihanId);
     const tujuan = await kunciMeja(tx, p.outletId, mejaId);
     const orangLain = (await penghuniMeja(tx, tujuan.id)).find((id) => id !== t.id);
     if (orangLain) throw mejaTerisi(tujuan.label, orangLain);
+    const mejaSebelum = await this.mejaIds(tx, t.id);
+    // Sudah di Meja itu saja: tidak ada yang berubah.
+    if (mejaSebelum.length === 1 && mejaSebelum[0] === tujuan.id) return tagihanLengkap(tx, t);
     await tx.delete(tagihanMeja).where(eq(tagihanMeja.tagihanId, t.id));
     await tx.insert(tagihanMeja).values({ tenantId: t.tenantId, outletId: t.outletId, tagihanId: t.id, mejaId: tujuan.id });
     const [baru] = await tx.update(tagihan).set({ mejaId: tujuan.id }).where(eq(tagihan.id, t.id)).returning();
+    await this.audit.catat({
+      aksi: 'pindah_meja',
+      entitas: 'tagihan',
+      entitasId: t.id,
+      outletId: p.outletId,
+      pelaku: pelakuAudit(pelaku, p),
+      sebelum: { mejaIds: mejaSebelum },
+      sesudah: { mejaIds: [tujuan.id] },
+    });
     return tagihanLengkap(tx, baru!);
   }
 
@@ -79,9 +98,11 @@ export class AturTagihanController {
     const t = await tagihanDineInTerbuka(tx, p.outletId, tagihanId);
     const tujuan = await kunciMeja(tx, p.outletId, mejaId);
     const penghuni = await penghuniMeja(tx, tujuan.id);
+    const mejaSebelum = await this.mejaIds(tx, t.id);
+    const digabung: string[] = [];
+    const itemPindah: string[] = [];
     if (penghuni.length === 0) {
       await tx.insert(tagihanMeja).values({ tenantId: t.tenantId, outletId: t.outletId, tagihanId: t.id, mejaId: tujuan.id });
-      return tagihanLengkap(tx, t);
     }
     for (const lainId of penghuni.filter((id) => id !== t.id)) {
       const lain = await tagihanDiOutlet(tx, p.outletId, lainId, { kunci: true });
@@ -93,7 +114,10 @@ export class AturTagihanController {
       if (await sudahAdaPembayaran(tx, lain.id)) {
         throw ditolak('tagihan_sudah_dibayar', 'Tagihan di Meja itu sudah menerima Pembayaran, jadi tidak bisa digabung.');
       }
-      await tx.update(itemPesanan).set({ tagihanId: t.id }).where(eq(itemPesanan.tagihanId, lain.id));
+      const itemLain = await itemTagihan(tx, [lain.id]);
+      await pindahkanItem(tx, itemLain, t, { sebab: 'gabung_meja', anggotaId: pelaku.anggotaId, perangkatId: p.id });
+      digabung.push(lain.id);
+      itemPindah.push(...itemLain.map((i) => i.id));
       // Meja Tagihan lain ikut pindah, kecuali yang sudah ditempati Tagihan ini juga.
       const mejaSendiri = (await tx.select({ mejaId: tagihanMeja.mejaId }).from(tagihanMeja).where(eq(tagihanMeja.tagihanId, t.id))).map((m) => m.mejaId);
       const mejaLain = await tx.select().from(tagihanMeja).where(eq(tagihanMeja.tagihanId, lain.id));
@@ -117,6 +141,19 @@ export class AturTagihanController {
           total: 0,
         })
         .where(eq(tagihan.id, lain.id));
+    }
+    const mejaSesudah = await this.mejaIds(tx, t.id);
+    // Meja itu sudah ditempati Tagihan ini dan tidak ada yang dilebur: tidak ada yang berubah.
+    if (digabung.length > 0 || mejaSesudah.length !== mejaSebelum.length) {
+      await this.audit.catat({
+        aksi: 'gabung_meja',
+        entitas: 'tagihan',
+        entitasId: t.id,
+        outletId: p.outletId,
+        pelaku: pelakuAudit(pelaku, p),
+        sebelum: { mejaIds: mejaSebelum },
+        sesudah: { mejaIds: mejaSesudah, tagihanDigabung: digabung, itemIds: itemPindah },
+      });
     }
     return tagihanLengkap(tx, t);
   }
@@ -190,10 +227,20 @@ export class AturTagihanController {
     if (mejanya.length > 0) {
       await tx.insert(tagihanMeja).values(mejanya.map((x) => ({ tenantId: t.tenantId, outletId: t.outletId, tagihanId: baru.id, mejaId: x.mejaId })));
     }
-    await tx
-      .update(itemPesanan)
-      .set({ tagihanId: baru.id })
-      .where(and(eq(itemPesanan.tagihanId, t.id), inArray(itemPesanan.id, dipilih)));
+    await pindahkanItem(
+      tx,
+      item.filter((i) => dipilih.includes(i.id)),
+      baru,
+      { sebab: 'pisah_tagihan', anggotaId: pelaku.anggotaId, perangkatId: p.id },
+    );
+    await this.audit.catat({
+      aksi: 'pisah_tagihan',
+      entitas: 'tagihan',
+      entitasId: t.id,
+      outletId: p.outletId,
+      pelaku: pelakuAudit(pelaku, p),
+      sesudah: { tagihanBaruId: baru.id, itemIds: dipilih },
+    });
     res.status(201);
     return { asal: await tagihanLengkap(tx, t), baru: await tagihanLengkap(tx, baru) };
   }
