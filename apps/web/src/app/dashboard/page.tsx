@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { t } from '../../i18n/id';
 import { COOKIE_SESI, panggilApi } from '../../lib/api';
 import { gayaTombolSekunder } from '../kartu';
+import { rp } from '../../lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,6 @@ interface PenjualanHariIni {
   perMetodeBayar?: { jenis: string; jumlah: number; nilai: number }[];
 }
 
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 
 interface Dashboard {
   tenant: { id: string; nama: string };

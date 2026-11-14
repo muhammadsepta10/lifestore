@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { t } from '../../i18n/id';
 import { panggilApi } from '../../lib/api';
 import { gayaInput, gayaTombol, gayaTombolSekunder, Kolom, Pesan } from '../kartu';
+import { rp } from '../../lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,6 @@ interface DetailTagihan {
 
 const kartu = { background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: 24 } as const;
 const angka = { fontVariantNumeric: 'tabular-nums' } as const;
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const jam = (iso: string | null) => (iso ? new Intl.DateTimeFormat('id-ID', { timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(iso)) : '');
 
 /** Daftar Tagihan tertutup per Outlet per tanggal (default hari ini) dengan detailnya. */

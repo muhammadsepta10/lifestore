@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { t } from '../../i18n/id';
 import { bayar } from './aksi-dinein';
+import { rp } from '../../lib/format';
 
 const k = t().kasir;
 const p = k.pos;
 const b = k.bayarLengkap;
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const angka = (teks: string) => Number(teks.replace(/\D/g, '') || 0);
 
 export interface MetodeBayarAktif {

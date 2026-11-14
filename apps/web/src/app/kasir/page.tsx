@@ -13,6 +13,7 @@ import { TombolCetak, TombolTema } from './klien';
 import { type PesananSiap, SiapDiambil, TombolBukaLaci } from './kendali';
 import { GridMenu, PanelPesanan, PenyediaPos } from './pos';
 import type { DaftarJual, MejaKasir, TagihanLengkap, TagihanTerbuka } from './tipe';
+import { rp } from '../../lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,6 @@ interface LaporanShift {
 
 type Cari = { galat?: string; modal?: string; laporan?: string; kategori?: string; info?: string; tagihan?: string; struk?: string };
 
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const jam = (iso: string) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).format(new Date(iso));
 const tanggalJam = (iso: string) =>
   new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(new Date(iso));
@@ -113,7 +113,7 @@ export default async function HalamanKasir({ searchParams }: { searchParams: Pro
     : undefined;
 
   return (
-    <LayarKasirB
+    <LayarKasir
       k={k}
       d={kasir.body}
       meja={meja.ok ? meja.body : []}
@@ -317,7 +317,7 @@ function StatusShift({ k, shift }: { k: Kamus; shift: ShiftTerbuka | null }) {
   );
 }
 
-function LayarKasirB({
+function LayarKasir({
   k,
   d,
   meja,

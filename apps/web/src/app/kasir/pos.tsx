@@ -9,6 +9,7 @@ import { type ItemKiriman, kirimPesanan } from './aksi';
 import { type MetodeBayarAktif, ModalBayar } from './bayar';
 import { type Atasan, KendaliTagihan, labelDiskon, TombolBatalItem } from './kendali';
 import type { KategoriJual, MenuJual, TagihanLengkap } from './tipe';
+import { rp } from '../../lib/format';
 
 /**
  * Bagian interaktif kasir varian B: keranjang (item yang belum dikirim) hidup di perangkat,
@@ -18,7 +19,6 @@ import type { KategoriJual, MenuJual, TagihanLengkap } from './tipe';
 
 const k = t().kasir;
 const p = k.pos;
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const tint = (warna: string | undefined): CSSProperties => ({ ['--tint' as string]: PASTEL_KATEGORI[warna as PastelKategori] ?? PASTEL_KATEGORI.sand });
 
 interface BarisKeranjang {

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { t } from '../../i18n/id';
 import { panggilApi } from '../../lib/api';
 import { gayaInput, gayaTombol, gayaTombolSekunder, Kolom, Pesan } from '../kartu';
+import { rp } from '../../lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,7 +139,7 @@ export default async function HalamanMejaBayar({ searchParams }: { searchParams:
                 <option value="0">{k.tanpaPembulatan}</option>
                 {[...new Set([...KELIPATAN, ...(pengaturan.body.pembulatanTunai ? [pengaturan.body.pembulatanTunai.kelipatan] : [])])].map((n) => (
                   <option key={n} value={n}>
-                    Rp{new Intl.NumberFormat('id-ID').format(n)}
+                    {rp(n)}
                   </option>
                 ))}
               </select>

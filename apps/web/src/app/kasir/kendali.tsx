@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 import { t } from '../../i18n/id';
 import { batalItem, batalTagihan, bukaLaci, hapusDiskon, type HasilKendali, pasangDiskon, type Persetujuan, tandaiDiambil, voidTagihan } from './aksi-kendali';
+import { rp } from '../../lib/format';
 
 const kd = t().kasir.kendali;
-const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 
 export interface Atasan {
   id: string;

@@ -1,4 +1,8 @@
 /** Bentuk respons API yang dipakai layar kasir (server dan klien). */
+import type { DiskonTagihan, Kanal, ProfilPajak, RincianTagihan } from '@lifestore/domain';
+
+/** Status dapur Item Pesanan; `ditahan` = belum masuk dapur (Outlet Bayar-dulu). */
+export type StatusItemPesanan = 'ditahan' | 'menunggu' | 'dimasak' | 'siap' | 'disajikan' | 'batal';
 
 export interface MenuJual {
   id: string;
@@ -32,32 +36,26 @@ export interface ItemPesanan {
   pilihan: { nama: string; harga: number }[];
   bebasPajak: boolean;
   catatan: string | null;
-  status: string;
+  status: StatusItemPesanan;
 }
 
-export interface Rincian {
-  subtotal: number;
-  diskon: number;
-  serviceCharge: number;
-  dasarPajak: number;
-  pajak: number;
-  total: number;
-}
+/** Angka Tagihan dari Hitung Tagihan, tanpa bagian Pembulatan Tunai. */
+export type Rincian = Omit<RincianTagihan, 'pembulatanTunai' | 'totalDibayar'>;
 
 export interface RingkasTagihan {
   id: string;
   status: 'terbuka' | 'lunas' | 'void' | 'batal' | 'digabung';
-  kanal: 'dine_in' | 'bawa_pulang';
+  kanal: Kanal;
   /** Meja yang ditempati (dine-in); lebih dari satu setelah gabung Meja. */
   meja: { id: string; label: string }[];
   namaPelanggan: string | null;
   nomorNota: number | null;
   dibukaPada: string;
   ditutupPada: string | null;
-  profilPajak: { jenis: 'PBJT' | 'PPN' | 'tidak_dipungut'; tarifPersen: number; labelStruk: string; hargaTermasukPajak: boolean };
-  serviceCharge: { tarifPersen: number; kanal: ('dine_in' | 'bawa_pulang')[] };
+  profilPajak: ProfilPajak & { labelStruk: string };
+  serviceCharge: { tarifPersen: number; kanal: Kanal[] };
   /** Diskon Manual yang terpasang (#39). */
-  diskonManual?: { jenis: 'persen' | 'nominal'; nilai: number; alasan: string | null } | null;
+  diskonManual?: (DiskonTagihan & { alasan: string | null }) | null;
   rincian: Rincian;
   total: number;
   dibayar: number;
@@ -82,7 +80,7 @@ export interface MejaKasir {
   label: string;
   kapasitas: number;
   aktif: boolean;
-  status: string;
+  status: 'kosong' | 'terisi';
   /** Tagihan terbuka yang menempati Meja ini. */
   tagihanId: string | null;
 }

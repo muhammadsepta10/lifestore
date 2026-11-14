@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { t } from '../../i18n/id';
 import { panggilApi } from '../../lib/api';
 import { gayaInput, gayaTombol, gayaTombolSekunder, Kolom, Pesan } from '../kartu';
+import { rp } from '../../lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,6 @@ interface Outlet {
   nama: string;
 }
 
-const rupiah = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
 const teks = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 
 /** Kembali ke halaman dengan pesan galat API (bila ada). */
@@ -261,11 +261,11 @@ export default async function HalamanMenu({ searchParams }: { searchParams: Prom
           {menu.body.map((m) => (
             <li key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--line)', opacity: m.aktif ? 1 : 0.5 }}>
               <span style={{ flex: 1 }}>
-                <strong>{m.nama}</strong> · {rupiah(m.harga)}
+                <strong>{m.nama}</strong> · {rp(m.harga)}
                 {m.bebasPajak ? ` · ${k.bebasPajak}` : ''}
                 <br />
                 <small style={{ color: 'var(--muted)' }}>
-                  {m.varian.map((v) => `${v.nama} ${rupiah(v.harga)}`).join(' / ')}
+                  {m.varian.map((v) => `${v.nama} ${rp(v.harga)}`).join(' / ')}
                   {m.grupPilihan.map((g) => ` · ${g.nama} (${g.minimum}–${g.maksimum})`).join('')}
                 </small>
               </span>
@@ -345,7 +345,7 @@ export default async function HalamanMenu({ searchParams }: { searchParams: Prom
               return (
                 <li key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--line)' }}>
                   <span style={{ flex: 1, opacity: o?.habis ? 0.5 : 1 }}>
-                    <strong>{m.nama}</strong> · {rupiah(o?.harga ?? m.harga)} · {o?.habis ? k.habis : k.tersedia}
+                    <strong>{m.nama}</strong> · {rp(o?.harga ?? m.harga)} · {o?.habis ? k.habis : k.tersedia}
                   </span>
                   <form action={simpanMenuOutlet} style={{ display: 'flex', gap: 8 }}>
                     <Tersembunyi nilai={{ ...dasar, menuId: m.id, hargaLama: hargaOutlet }} />
