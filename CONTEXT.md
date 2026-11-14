@@ -37,11 +37,11 @@ _Avoid_: Customer, konsumen, member (kecuali dalam konteks loyalti)
 ## Pesanan
 
 **Kanal**:
-Jalur asal pesanan: QR meja, kasir (dine-in/takeaway), web sendiri, atau ojol (GoFood/GrabFood/ShopeeFood); menentukan alur bayar-dulu atau bayar-di-akhir.
+Jalur asal pesanan: dine-in dan bawa pulang (takeaway) dari kasir, QR meja, web sendiri, atau ojol (GoFood/GrabFood/ShopeeFood); menentukan alur bayar-dulu atau bayar-di-akhir dan berlaku-tidaknya Service Charge.
 _Avoid_: Channel, sumber
 
 **Tagihan**:
-Satu unit pembayaran (satu kunjungan meja, satu takeaway, atau satu order ojol) yang menampung satu atau lebih Pesanan dan bisa menempati lebih dari satu meja.
+Satu unit pembayaran (satu kunjungan meja, satu takeaway, atau satu order ojol) yang menampung satu atau lebih Pesanan dan bisa menempati lebih dari satu meja; berstatus terbuka, lunas, void, batal (dibatalkan sebelum pernah berisi item), atau digabung (dilebur ke Tagihan lain lewat Gabung Meja).
 _Avoid_: Bill, open bill, transaksi, nota
 
 **Pesanan**:
@@ -49,7 +49,7 @@ Satu kali kiriman item ke dapur di dalam sebuah Tagihan; status dapurnya diturun
 _Avoid_: Order, ronde, tiket
 
 **Item Pesanan**:
-Satu menu di dalam Pesanan beserta varian, add-on, dan catatannya, dengan status dapur sendiri (menunggu, dimasak, siap, disajikan, batal); tidak bisa diubah setelah dikirim ke dapur.
+Satu menu di dalam Pesanan beserta varian, add-on, dan catatannya, dengan status dapur sendiri (menunggu, dimasak, siap, disajikan, batal, serta ditahan selama belum boleh masuk dapur di Outlet Bayar-dulu); tidak bisa diubah setelah dikirim ke dapur, dan perpindahannya ke Tagihan lain dicatat sebagai kejadian.
 _Avoid_: Order line, line item
 
 **Nomor Pesanan**:
@@ -59,6 +59,30 @@ _Avoid_: Nomor antrian, order ID
 **Pisah Tagihan**:
 Memindahkan sebagian item ke Tagihan baru; berbeda dari Bayar Terpisah, yaitu satu Tagihan dilunasi dengan beberapa pembayaran.
 _Avoid_: Split bill (ambigu)
+
+**Bayar Terpisah**:
+Satu Tagihan dilunasi dengan beberapa Pembayaran (misal tunai dan QRIS statis); Tagihannya tetap satu dan baru ditutup saat sisanya nol.
+_Avoid_: Split payment, split bill (ambigu)
+
+**Pindah Meja**:
+Memindahkan Tagihan dine-in ke Meja lain yang Kosong; Tagihannya tetap satu dan Meja lama menjadi Kosong.
+_Avoid_: Move table, tukar meja
+
+**Gabung Meja**:
+Menambahkan Meja ke Tagihan dine-in; bila Meja itu terisi Tagihan lain, Item Pesanannya dipindahkan ke Tagihan ini dan Tagihan lain berstatus digabung.
+_Avoid_: Merge table, gabung bill
+
+**Bayar-dulu**:
+Pengaturan Outlet: Pesanan bawa pulang ditahan dari dapur sampai Tagihannya lunas, kecuali kasir sudah menerima Pembayaran tunai untuk Tagihan itu.
+_Avoid_: Prepaid, pay first
+
+**Hitung Tagihan**:
+Satu-satunya perhitungan angka Tagihan (subtotal, Diskon Manual, Service Charge, Dasar Pajak, pajak, total, Pembulatan Tunai) dari Item Pesanan dan salinan Profil Pajak; dipakai sama oleh server dan layar kasir.
+_Avoid_: Kalkulasi bill, hitung total
+
+**Kendali Kasir**:
+Aksi kasir atas Tagihan terbuka yang dibatasi dan selalu tercatat di Log Audit: batal Item Pesanan, batal Tagihan kosong, void, Diskon Manual, dan buka laci tanpa transaksi.
+_Avoid_: Kontrol, override kasir
 
 **Waste**:
 Bahan yang terpakai tetapi tidak menghasilkan penjualan, misalnya Item Pesanan yang dibatalkan setelah dimasak.
