@@ -271,7 +271,7 @@ function LayarTidakBerizin({ k }: { k: Kamus }) {
 
 function Sidebar({ k, d }: { k: Kamus; d: LayarKasir }) {
   const nav: [NamaIkon, string, boolean][] = [
-    ['rumah', k.nav.beranda, false],
+    ['rumah', k.nav.dashboard, false],
     ['tas', k.nav.kasir, true],
     ['kisi', k.nav.meja, false],
     ['papan', k.nav.pesanan, false],

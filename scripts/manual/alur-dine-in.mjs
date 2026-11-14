@@ -215,7 +215,7 @@ try {
     await halaman.waitForSelector('a[data-tagihan]');
     assert.equal(await halaman.locator('a[data-tagihan]').count(), 2);
     assert.equal(await halaman.locator('[data-total-hari]').getAttribute('data-total-hari'), '78540');
-    assert.match(await teks('a[data-tagihan]'), /Nota #000002.*Dine-in · Meja 2.*Rp57\.750/);
+    assert.match(await teks('a[data-tagihan]'), /Nomor Nota 000002.*Dine-in · Meja 2.*Rp57\.750/);
     await halaman.locator('a[data-tagihan]').first().click();
     await halaman.waitForSelector('[data-detail-tagihan]');
     assert.equal(await halaman.locator('[data-detail-tagihan] [data-total]').getAttribute('data-total'), '57750');

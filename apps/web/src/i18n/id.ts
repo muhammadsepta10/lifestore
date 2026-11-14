@@ -1,4 +1,6 @@
 /** Teks UI Bahasa Indonesia (bahasa utama). Semua teks UI lewat kamus ini agar siap i18n. */
+const nomorNota = (nomor: number) => `Nomor Nota ${String(nomor).padStart(6, '0')}`;
+
 export const id = {
   aplikasi: { nama: 'Lifestore', judul: 'Lifestore', deskripsi: 'Manajemen restoran: kasir, dapur, dan laporan.' },
   status: {
@@ -20,7 +22,7 @@ export const id = {
     kirim: 'Daftar',
     terkirimJudul: 'Cek email Anda',
     terkirim: 'Kami mengirim tautan verifikasi ke email Anda. Klik tautan itu untuk mulai.',
-    sudahPunya: 'Sudah punya akun? Masuk',
+    sudahPunya: 'Sudah terdaftar? Masuk',
     gagal: 'Pendaftaran gagal. Periksa kembali isian Anda.',
     emailTerdaftar: 'Email sudah terdaftar. Silakan masuk.',
   },
@@ -38,9 +40,9 @@ export const id = {
     kirim: 'Masuk',
     salah: 'Email atau kata sandi salah.',
     belumVerifikasi: 'Verifikasi email terlebih dahulu lewat tautan yang kami kirim.',
-    belumPunya: 'Belum punya akun? Daftar',
+    belumPunya: 'Belum terdaftar? Daftar',
   },
-  pilihTenant: { judul: 'Pilih usaha', sub: 'Akun Anda terdaftar di beberapa usaha.' },
+  pilihTenant: { judul: 'Pilih usaha', sub: 'Anda terdaftar di beberapa usaha.' },
   dashboard: {
     masaCoba: (sisa: number) => `Masa Coba Pro: sisa ${sisa} hari`,
     masaCobaHabis: 'Masa Coba telah berakhir',
@@ -83,7 +85,7 @@ export const id = {
     tanggal: 'Tanggal',
     tampilkan: 'Tampilkan',
     kosong: 'Tidak ada Tagihan lunas pada tanggal ini.',
-    nota: (nomor: number) => `Nota #${String(nomor).padStart(6, '0')}`,
+    nota: nomorNota,
     jumlahItem: (n: number) => `${n} item`,
     detail: 'Detail Tagihan',
     tutupDetail: 'Tutup',
@@ -190,7 +192,7 @@ export const id = {
     bukaDapur: 'Buka layar dapur',
     sapa: (nama: string) => `Halo, ${nama} 👋`,
     keluar: 'Ganti kasir',
-    nav: { beranda: 'Beranda', kasir: 'Kasir', meja: 'Meja', pesanan: 'Pesanan', laporan: 'Laporan Shift' },
+    nav: { dashboard: 'Dashboard', kasir: 'Kasir', meja: 'Meja', pesanan: 'Pesanan', laporan: 'Laporan Shift' },
     peran: { pemilik: 'Pemilik', karyawan: 'Karyawan' } as Record<string, string>,
     shift: {
       belum: 'Shift belum dibuka',
@@ -366,7 +368,7 @@ export const id = {
       tagihanGagal: 'Tagihan tidak bisa dibuka. Coba lagi.',
       struk: {
         judul: 'Struk',
-        nota: (nomor: number) => `Nota #${String(nomor).padStart(6, '0')}`,
+        nota: nomorNota,
         tunai: 'Tunai',
         kembalian: 'Kembalian',
         terimaKasih: 'Terima kasih!',
@@ -436,7 +438,7 @@ export const id = {
     dineIn: 'Dine-in',
     online: 'Online',
     offline: 'Offline',
-    keluar: 'Ganti staf',
+    keluar: 'Ganti Anggota',
     belumTerdaftar: 'Perangkat ini belum terdaftar. Daftarkan dulu lewat layar kasir, lalu buka lagi layar dapur.',
     keKasir: 'Buka layar kasir',
     pinJudul: 'Masuk layar dapur',

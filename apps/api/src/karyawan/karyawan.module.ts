@@ -258,7 +258,7 @@ export class UndanganController {
         penggunaId = p!.id;
       }
       const [sudah] = await tx.select({ id: anggota.id }).from(anggota).where(eq(anggota.penggunaId, penggunaId));
-      if (sudah) throw new ConflictException({ kode: 'sudah_anggota', pesan: 'Akun ini sudah menjadi Anggota usaha ini.' });
+      if (sudah) throw new ConflictException({ kode: 'sudah_anggota', pesan: 'Pengguna ini sudah menjadi Anggota usaha ini.' });
       const [a] = await tx
         .update(anggota)
         .set({ penggunaId })
