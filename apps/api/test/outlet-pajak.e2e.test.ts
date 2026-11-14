@@ -53,7 +53,7 @@ describe('Pemilik menyiapkan Merek, Outlet, dan Profil Pajak', () => {
     };
     await pemilik.patch(`/v1/outlet/${pemilik.outletId}`, profil).expect(200);
     const res = await pemilik.get(`/v1/outlet/${pemilik.outletId}`).expect(200);
-    expect(res.body).toEqual({ id: pemilik.outletId, merekId: pemilik.merekId, ...profil });
+    expect(res.body).toEqual({ id: pemilik.outletId, merekId: pemilik.merekId, ...profil, pembulatanTunai: null, bayarDulu: false });
   });
 
   it('jam buka yang tidak valid ditolak', async () => {

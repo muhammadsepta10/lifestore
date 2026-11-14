@@ -1,5 +1,5 @@
 import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, sum } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql, sum } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
 import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift } from '../database/schema';
@@ -52,7 +52,12 @@ async function ringkasKas(tx: TxDb, shiftId: string) {
  */
 async function penjualanShift(tx: TxDb, shiftId: string) {
   const baris = await tx
-    .select({ jenis: pembayaran.metode, jumlah: count(), nilai: sum(pembayaran.jumlah).mapWith(Number) })
+    .select({
+      jenis: pembayaran.metode,
+      jumlah: count(),
+      nilai: sum(sql`${pembayaran.jumlah} - ${pembayaran.pembulatan}`).mapWith(Number),
+      pembulatan: sum(pembayaran.pembulatan).mapWith(Number),
+    })
     .from(pembayaran)
     .where(eq(pembayaran.shiftId, shiftId))
     .groupBy(pembayaran.metode);
@@ -61,6 +66,8 @@ async function penjualanShift(tx: TxDb, shiftId: string) {
   return {
     penjualanPerMetodeBayar,
     penjualanTunai: penjualanPerMetodeBayar.find((x) => x.jenis === 'tunai')?.nilai ?? 0,
+    /** Pembulatan Tunai: ikut masuk laci, tetapi bukan penjualan. */
+    pembulatanTunai: baris.reduce((s, b) => s + (b.pembulatan ?? 0), 0),
     void: { jumlah: 0, nilai: 0 },
   };
 }
@@ -68,8 +75,8 @@ async function penjualanShift(tx: TxDb, shiftId: string) {
 /** Kas seharusnya di laci: modal awal + penjualan tunai + kas masuk − kas keluar. */
 async function hitungKasSeharusnya(tx: TxDb, s: BarisShift): Promise<number> {
   const { kasMasuk, kasKeluar } = await ringkasKas(tx, s.id);
-  const { penjualanTunai } = await penjualanShift(tx, s.id);
-  return s.kasAwal + penjualanTunai + kasMasuk - kasKeluar;
+  const { penjualanTunai, pembulatanTunai } = await penjualanShift(tx, s.id);
+  return s.kasAwal + penjualanTunai + pembulatanTunai + kasMasuk - kasKeluar;
 }
 
 /**

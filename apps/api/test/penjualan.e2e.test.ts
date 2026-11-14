@@ -164,11 +164,11 @@ describe('Penjualan: Tagihan bawa pulang sampai lunas tunai', () => {
     expect(pesanan.item[0]).toMatchObject({ nama: 'Sate Ayam', hargaSatuan: 30_000, bebasPajak: false });
 
     // Klien mengaku totalnya Rp1.000: uang Rp1.000 tetap kurang.
-    const kurang = await kasir.post(`/v1/tagihan/${tagihanId}/pembayaran`, { metode: 'tunai', diterima: 1_000, total: 1_000, jumlah: 1_000, sisa: 1_000 }).expect(409);
+    const kurang = await kasir.post(`/v1/tagihan/${tagihanId}/pembayaran`, { metode: 'tunai', diterima: 1_000, total: 1_000, sisa: 1_000 }).expect(409);
     expect(kurang.body).toMatchObject({ kode: 'pembayaran_kurang', sisa: 33_000 });
     const bayar = (
       await kasir
-        .post(`/v1/tagihan/${tagihanId}/pembayaran`, { metode: 'tunai', diterima: 40_000, total: 1_000, jumlah: 1_000, kembalian: 39_000, rincian: { total: 1_000 } })
+        .post(`/v1/tagihan/${tagihanId}/pembayaran`, { metode: 'tunai', diterima: 40_000, total: 1_000, kembalian: 39_000, rincian: { total: 1_000 } })
         .expect(201)
     ).body;
     expect(bayar.pembayaran).toMatchObject({ jumlah: 33_000, diterima: 40_000, kembalian: 7_000 });

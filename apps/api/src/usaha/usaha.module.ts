@@ -4,7 +4,7 @@ import { Database, type TxDb } from '../database/database';
 import { type JamBukaHari, merek, outlet } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { buatProfilPajakDefault } from '../pajak/pajak.module';
-import { objek, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { angka, boolean, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { PerluIzin } from '../izin/izin';
 
 type BarisOutlet = typeof outlet.$inferSelect;
@@ -18,6 +18,10 @@ export function tampilkanOutlet(o: BarisOutlet) {
     kota: o.kota,
     jamBuka: o.jamBuka ?? [],
     logoUrl: o.logoUrl,
+    /** Aturan Pembulatan Tunai; null = tunai tidak dibulatkan. */
+    pembulatanTunai: o.pembulatanTunaiKelipatan && o.pembulatanTunaiArah ? { kelipatan: o.pembulatanTunaiKelipatan, arah: o.pembulatanTunaiArah } : null,
+    /** Outlet bayar-dulu: Pesanan bawa pulang masuk dapur setelah lunas. */
+    bayarDulu: o.bayarDulu,
   };
 }
 
@@ -106,7 +110,7 @@ export class OutletController {
     return tampilkanOutlet(await buatOutlet(tx, { tenantId: mk.tenantId, merekId: mk.id, nama, kota, alamat }));
   }
 
-  /** Ubah profil Outlet: nama, alamat, kota, jam buka, logo. */
+  /** Ubah profil Outlet: nama, alamat, kota, jam buka, logo, aturan Pembulatan Tunai, dan bayar-dulu. */
   @Patch(':id')
   @PerluIzin('outlet.ubah', { outletParam: 'id' })
   async ubah(@Param('id') id: string, @Body() body: unknown) {
@@ -117,6 +121,17 @@ export class OutletController {
     if (m.alamat !== undefined) perubahan.alamat = teksOpsional(m, 'alamat');
     if (m.logoUrl !== undefined) perubahan.logoUrl = urlLogo(teksOpsional(m, 'logoUrl', { maks: 2000 }));
     if (m.jamBuka !== undefined) perubahan.jamBuka = jamBukaValid(m.jamBuka);
+    if (m.bayarDulu !== undefined) perubahan.bayarDulu = boolean(m, 'bayarDulu');
+    if (m.pembulatanTunai === null) {
+      perubahan.pembulatanTunaiKelipatan = null;
+      perubahan.pembulatanTunaiArah = null;
+    } else if (m.pembulatanTunai !== undefined) {
+      const a = objek(m.pembulatanTunai);
+      const kelipatan = angka(a, 'kelipatan', { min: 2, maks: 100_000 });
+      if (!Number.isInteger(kelipatan)) throw tidakValid('kelipatan', 'Harus rupiah bulat.');
+      perubahan.pembulatanTunaiKelipatan = kelipatan;
+      perubahan.pembulatanTunaiArah = pilihan(a, 'arah', ['bawah', 'terdekat', 'atas'] as const);
+    }
 
     const tx = this.db.tenant();
     const [o] =

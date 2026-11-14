@@ -2,12 +2,12 @@ import { Body, Controller, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
-import { itemPesanan, kejadianItemPesanan, pesanan } from '../database/schema';
+import { itemPesanan, kejadianItemPesanan, outlet, pesanan } from '../database/schema';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { type PermintaanItemPesanan, siapkanItemPesanan } from '../menu/item-pesanan';
 import { Jam } from '../umum/jam';
-import { angka, objek, teksOpsional, tidakValid } from '../umum/validasi';
+import { angka, boolean, objek, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciPesanan, nomorBerikut, tanggalOperasional } from './nomor';
 import { idDipakai, idKlien, itemTagihan, STATUS_ITEM_AWAL, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
 
@@ -69,6 +69,7 @@ export class PesananController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const id = idKlien(objek(body));
+    const tunaiDiKasir = objek(body).tunaiDiKasir === undefined ? false : boolean(objek(body), 'tunaiDiKasir');
     const diminta = bacaItem(body);
     const tx = this.db.tenant();
     // Kunci Tagihan: kiriman ulang yang datang bersamaan antre di sini, bukan menggandakan Pesanan.
@@ -82,6 +83,10 @@ export class PesananController {
       }
     }
     if (t.status !== 'terbuka') throw tagihanSudahDitutup();
+
+    // Outlet bayar-dulu: Pesanan bawa pulang ditahan dari dapur sampai lunas, kecuali tunai di kasir.
+    const [o] = await tx.select({ bayarDulu: outlet.bayarDulu }).from(outlet).where(eq(outlet.id, p.outletId));
+    const statusAwal = o?.bayarDulu && t.kanal === 'bawa_pulang' && !tunaiDiKasir ? ('ditahan' as const) : STATUS_ITEM_AWAL;
 
     const salinan = [];
     for (const d of diminta) salinan.push({ diminta: d, menu: await siapkanItemPesanan(tx, p.outletId, d) });
@@ -135,7 +140,7 @@ export class PesananController {
         tenantId: p.tenantId,
         outletId: p.outletId,
         itemPesananId: i.id,
-        status: STATUS_ITEM_AWAL,
+        status: statusAwal,
         anggotaId: pelaku.anggotaId,
         perangkatId: p.id,
       })),
@@ -143,7 +148,7 @@ export class PesananController {
     res.status(201);
     return tampilkanPesanan(
       baru,
-      item.sort((a, b) => a.urutan - b.urutan).map((i) => ({ ...i, status: STATUS_ITEM_AWAL })),
+      item.sort((a, b) => a.urutan - b.urutan).map((i) => ({ ...i, status: statusAwal })),
     );
   }
 }

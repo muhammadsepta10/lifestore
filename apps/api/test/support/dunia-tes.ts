@@ -108,7 +108,7 @@ export interface KasirTes extends PerangkatTes {
   /** Buka Tagihan bawa pulang; mengembalikan ID Tagihan. */
   bukaTagihan(data?: { id?: string; namaPelanggan?: string }): Promise<string>;
   /** Kirim item sebagai satu Pesanan (tanpa memeriksa status; pakai `.expect(...)`). */
-  kirimPesanan(tagihanId: string, item: ItemPesananTes[], opsi?: { id?: string }): Permintaan;
+  kirimPesanan(tagihanId: string, item: ItemPesananTes[], opsi?: { id?: string; tunaiDiKasir?: boolean }): Permintaan;
   /** Bayar tunai (tanpa memeriksa status; pakai `.expect(...)`). */
   bayarTunai(tagihanId: string, diterima: number, opsi?: { id?: string }): Permintaan;
   /** Buka Tagihan dine-in di sebuah Meja; mengembalikan ID Tagihan. */
