@@ -1,4 +1,4 @@
-import { Body, ConflictException, Controller, HttpCode, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
@@ -6,15 +6,11 @@ import { itemPesanan, pembayaran, tagihan, tagihanMeja } from '../database/schem
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { Jam } from '../umum/jam';
-import { objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
+import { ditolak, objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
 import { type BarisTagihan, idDipakai, idKlien, itemTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 const MAKS_ITEM_PISAH = 500;
-
-function ditolak(kode: string, pesan: string): ConflictException {
-  return new ConflictException({ kode, pesan });
-}
 
 /** Tagihan dine-in terbuka milik Outlet, terkunci; selain itu 404/409. */
 async function tagihanDineInTerbuka(tx: TxDb, outletId: string, id: string): Promise<BarisTagihan> {
@@ -90,6 +86,9 @@ export class AturTagihanController {
     for (const lainId of penghuni.filter((id) => id !== t.id)) {
       const lain = await tagihanDiOutlet(tx, p.outletId, lainId, { kunci: true });
       if (lain.status !== 'terbuka') continue;
+      // Diskon di Tagihan penerima akan membesar (persen) atau berubah persentasenya (nominal)
+      // begitu item Tagihan lain masuk; diskon di Tagihan lain akan hilang. Keduanya ditolak.
+      pastikanTanpaDiskon(t);
       pastikanTanpaDiskon(lain);
       if (await sudahAdaPembayaran(tx, lain.id)) {
         throw ditolak('tagihan_sudah_dibayar', 'Tagihan di Meja itu sudah menerima Pembayaran, jadi tidak bisa digabung.');

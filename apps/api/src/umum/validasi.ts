@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 /**
  * Validasi masukan JSON yang kecil dan eksplisit. Setiap kegagalan menjadi 400 dengan
@@ -10,6 +10,11 @@ export function tidakValid(kolom: string, pesan: string): BadRequestException {
 
 export function tidakDitemukan(apa: string): NotFoundException {
   return new NotFoundException({ kode: 'tidak_ditemukan', pesan: `${apa} tidak ditemukan.` });
+}
+
+/** Perintah yang sah bentuknya tetapi ditolak oleh keadaan data saat ini: 409 dengan `{ kode, pesan }`. */
+export function ditolak(kode: string, pesan: string, tambahan: object = {}): ConflictException {
+  return new ConflictException({ kode, pesan, ...tambahan });
 }
 
 export type Masukan = Record<string, unknown>;

@@ -1,4 +1,4 @@
-import { Body, ConflictException, Controller, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { bulatkanTunai } from '@lifestore/domain';
 import { eq } from 'drizzle-orm';
 import type { Response } from 'express';
@@ -9,7 +9,7 @@ import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/pera
 import { JENIS_METODE_BAYAR, metodeBayarAktif } from '../pembayaran/metode-bayar.module';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
-import { angka, type Masukan, objek, pilihan, teksOpsional, tidakValid } from '../umum/validasi';
+import { angka, ditolak, type Masukan, objek, pilihan, teksOpsional, tidakValid } from '../umum/validasi';
 import { KUNCI_NOTA, nomorBerikut } from './nomor';
 import {
   type BarisTagihan,
@@ -30,10 +30,6 @@ function rupiah(m: Masukan, kolom: string): number {
   const v = angka(m, kolom, { min: 1, maks: MAKS_RUPIAH });
   if (!Number.isInteger(v)) throw tidakValid(kolom, 'Harus rupiah bulat.');
   return v;
-}
-
-function ditolak(kode: string, pesan: string, tambahan: object = {}): ConflictException {
-  return new ConflictException({ kode, pesan, ...tambahan });
 }
 
 /**

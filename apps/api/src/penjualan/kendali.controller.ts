@@ -1,14 +1,14 @@
-import { Body, ConflictException, Controller, Delete, ForbiddenException, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import { Database } from '../database/database';
 import { itemPesanan, kejadianItemPesanan, pembayaran, tagihan } from '../database/schema';
 import { type Pelaku, PelakuAktif, PERAN_PEMILIK, PerluIzin, punyaIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
-import { buktiPersetujuanDari, PersetujuanAtasan } from '../karyawan/persetujuan-atasan';
+import { type BuktiPersetujuan, buktiPersetujuanDari, PersetujuanAtasan } from '../karyawan/persetujuan-atasan';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
-import { angka, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { angka, ditolak, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 /**
@@ -26,8 +26,9 @@ export function batasDiskonPersen(pelaku: Pick<Pelaku, 'peran' | 'penugasan'>, o
   return Math.max(0, ...pelaku.penugasan.filter((t) => t.outletId === outletId).map((t) => BATAS_DISKON_PERSEN[t.peran] ?? 0));
 }
 
-function ditolak(kode: string, pesan: string): ConflictException {
-  return new ConflictException({ kode, pesan });
+/** Diskon Manual sebagai persen dari subtotal; nominal dinilai terhadap subtotal itu. */
+function persenDiskon(d: { jenis: 'persen' | 'nominal'; nilai: number }, subtotal: number): number {
+  return d.jenis === 'persen' ? d.nilai : (d.nilai / subtotal) * 100;
 }
 
 function diskonTerpasang(t: BarisTagihan) {
@@ -54,6 +55,24 @@ export class KendaliController {
   }
 
   /**
+   * Diskon Manual sebesar `persen` dari subtotal oleh Pelaku: dalam batas Perannya tidak butuh
+   * apa-apa (hasil `null`); di atas batas wajib Persetujuan Atasan `diskon.di_atas_batas`.
+   */
+  private async persetujuanDiskon(pelaku: Pelaku, outletId: string, persen: number, bukti: BuktiPersetujuan | undefined): Promise<string | null> {
+    const batasPersen = batasDiskonPersen(pelaku, outletId);
+    if (persen <= batasPersen) return null;
+    if (!bukti && !punyaIzin(pelaku, 'diskon.di_atas_batas', outletId)) {
+      throw new ForbiddenException({
+        kode: 'perlu_persetujuan_atasan',
+        izin: 'diskon.di_atas_batas',
+        batasPersen,
+        pesan: `Diskon Manual di atas ${batasPersen}% butuh Persetujuan Atasan (PIN).`,
+      });
+    }
+    return (await this.persetujuan.pastikan(pelaku, 'diskon.di_atas_batas', outletId, bukti)).penyetujuAnggotaId;
+  }
+
+  /**
    * Batalkan satu Item Pesanan. Yang masih `menunggu` tanpa persetujuan; yang sudah `dimasak` atau
    * `siap` butuh alasan dan Persetujuan Atasan, dan ditandai Waste. Item `disajikan` tidak bisa dibatalkan.
    */
@@ -72,12 +91,19 @@ export class KendaliController {
     if (item.status === 'disajikan') throw ditolak('item_sudah_disajikan', 'Item Pesanan yang sudah disajikan tidak bisa dibatalkan.');
 
     // Bayar Terpisah: sisa item harus tetap bernilai di atas yang sudah dibayar.
-    await pastikanTotalDiAtasDibayar(tx, t.id, rincianTagihan(t, (await itemTagihan(tx, [t.id])).map((i) => (i.id === item.id ? { ...i, status: 'batal' as const } : i))).total);
+    const sisa = rincianTagihan(t, (await itemTagihan(tx, [t.id])).map((i) => (i.id === item.id ? { ...i, status: 'batal' as const } : i)));
+    await pastikanTotalDiAtasDibayar(tx, t.id, sisa.total);
+
+    // Diskon Manual nominal membesar persentasenya ketika subtotal menyusut: batas Peran diperiksa
+    // lagi terhadap subtotal yang tersisa. Diskon persen tidak berubah, jadi tidak diperiksa ulang.
+    const diskonLama = diskonTerpasang(t);
+    const penyetujuDiskon =
+      diskonLama?.jenis === 'nominal' && sisa.subtotal > 0 ? await this.persetujuanDiskon(pelaku, p.outletId, persenDiskon(diskonLama, sisa.subtotal), bukti) : null;
 
     // Item yang ditahan (Outlet bayar-dulu) belum masuk dapur, sama seperti yang masih menunggu.
     const sudahDimasak = !belumDimasak(item.status);
     const alasan = sudahDimasak ? teks(m, 'alasan', { maks: 200 }) : (teksOpsional(m, 'alasan', { maks: 200 }) ?? null);
-    const penyetujuAnggotaId = sudahDimasak ? (await this.persetujuan.pastikan(pelaku, 'item.batal_setelah_dimasak', p.outletId, bukti)).penyetujuAnggotaId : null;
+    const penyetujuAnggotaId = sudahDimasak ? (await this.persetujuan.pastikan(pelaku, 'item.batal_setelah_dimasak', p.outletId, bukti)).penyetujuAnggotaId : penyetujuDiskon;
     await tx.insert(kejadianItemPesanan).values({
       tenantId: p.tenantId,
       outletId: p.outletId,
@@ -225,20 +251,8 @@ export class KendaliController {
     // Bayar Terpisah: total setelah diskon harus tetap di atas yang sudah dibayar.
     await pastikanTotalDiAtasDibayar(tx, t.id, rincianTagihan({ ...t, diskonJenis: jenis, diskonNilai: nilai }, item).total);
 
-    const persen = jenis === 'persen' ? nilai : (nilai / subtotal) * 100;
     const batasPersen = batasDiskonPersen(pelaku, p.outletId);
-    let penyetujuAnggotaId: string | null = null;
-    if (persen > batasPersen) {
-      if (!bukti && !punyaIzin(pelaku, 'diskon.di_atas_batas', p.outletId)) {
-        throw new ForbiddenException({
-          kode: 'perlu_persetujuan_atasan',
-          izin: 'diskon.di_atas_batas',
-          batasPersen,
-          pesan: `Diskon Manual di atas ${batasPersen}% butuh Persetujuan Atasan (PIN).`,
-        });
-      }
-      penyetujuAnggotaId = (await this.persetujuan.pastikan(pelaku, 'diskon.di_atas_batas', p.outletId, bukti)).penyetujuAnggotaId;
-    }
+    const penyetujuAnggotaId = await this.persetujuanDiskon(pelaku, p.outletId, persenDiskon({ jenis, nilai }, subtotal), bukti);
     const [diubah] = await tx
       .update(tagihan)
       .set({ diskonJenis: jenis, diskonNilai: nilai, diskonAlasan: alasan, diskonOlehAnggotaId: pelaku.anggotaId, diskonPenyetujuAnggotaId: penyetujuAnggotaId })
