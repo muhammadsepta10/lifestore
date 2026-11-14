@@ -92,20 +92,6 @@
       "when": 1794588057694,
       "tag": "0012_rls_penjualan",
       "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1794606202151,
-      "tag": "0013_dinein",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1794606202935,
-      "tag": "0014_rls_dinein",
-      "breakpoints": true
     }
   ]
 }
