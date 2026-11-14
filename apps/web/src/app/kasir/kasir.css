@@ -1016,3 +1016,59 @@ button.mcard:not(:disabled):active {
     max-height: none;
   }
 }
+
+/* ---------- Kendali kasir (#39): batal item, diskon, void, Persetujuan Atasan ---------- */
+.oline {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.oline .ostatus {
+  grid-column: 2 / 4;
+  justify-self: start;
+}
+.obatal {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.okendali {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.okendali .tombol {
+  flex: 1 1 auto;
+  min-height: 44px;
+  font-size: 14px;
+}
+.tombol.bahaya {
+  color: var(--danger);
+}
+.persetujuan {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.persetujuan legend {
+  font-weight: 800;
+  padding: 0 6px;
+}
+select.isian {
+  appearance: auto;
+}
+.ocard.siap {
+  background: var(--ok-soft);
+  display: grid;
+  gap: 4px;
+}

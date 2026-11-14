@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createContext, type CSSProperties, type ReactNode, useContext, useMemo, useState } from 'react';
 import { t } from '../../i18n/id';
 import { bayarTunai, type ItemKiriman, kirimPesanan } from './aksi';
+import { type Atasan, KendaliTagihan, labelDiskon, TombolBatalItem } from './kendali';
 import type { KategoriJual, MenuJual, TagihanLengkap } from './tipe';
 
 /**
@@ -251,7 +252,7 @@ function rincianBaris(b: { namaVarian?: string | null; pilihan: { nama: string }
 }
 
 /** Panel kanan: Pesanan terkirim, keranjang, rincian langsung, Kirim Pesanan, dan Bayar tunai. */
-export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tunaiAktif: boolean }) {
+export function PanelPesanan({ adaShift, tunaiAktif, atasan = [] }: { adaShift: boolean; tunaiAktif: boolean; atasan?: Atasan[] }) {
   const pos = usePos();
   const router = useRouter();
   const { tagihan, keranjang } = pos;
@@ -272,6 +273,7 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
             kanal: tagihan.kanal,
             profilPajak: tagihan.profilPajak,
             serviceCharge: tagihan.serviceCharge,
+            diskon: tagihan.diskonManual ?? null,
           })
         : null,
     [tagihan, terkirim, keranjang],
@@ -350,7 +352,10 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
                   <small>{[rincianBaris(i), i.catatan].filter(Boolean).join(' — ')}</small>
                 </span>
                 <span className="oprice">{rp((i.hargaSatuan + i.pilihan.reduce((s, x) => s + x.harga, 0)) * i.jumlah)}</span>
-                <span className="pil redup ostatus">{p.statusItem[i.status] ?? i.status}</span>
+                <span className="pil redup ostatus" data-status-item={i.status}>
+                  {p.statusItem[i.status] ?? i.status}
+                </span>
+                <TombolBatalItem tagihanId={tagihan.id} item={i} atasan={atasan} />
               </div>
             ))}
           </div>
@@ -382,6 +387,12 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
       <div className="osum" data-rincian>
         <span>{p.subtotal}</span>
         <span data-subtotal>{rp(rincian.subtotal)}</span>
+        {tagihan.diskonManual && rincian.diskon > 0 ? (
+          <>
+            <span>{labelDiskon(tagihan.diskonManual)}</span>
+            <span data-diskon>−{rp(rincian.diskon)}</span>
+          </>
+        ) : null}
         {rincian.serviceCharge > 0 ? (
           <>
             <span>{p.serviceCharge}</span>
@@ -420,6 +431,7 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
           {halangan}
         </p>
       ) : null}
+      {!adaKeranjang ? <KendaliTagihan tagihanId={tagihan.id} berisiItem={terkirim.length > 0} diskon={tagihan.diskonManual ?? null} atasan={atasan} /> : null}
       {bayar ? <ModalBayar tagihanId={tagihan.id} total={tagihan.sisa} tutup={() => setBayar(false)} /> : null}
     </aside>
   );
