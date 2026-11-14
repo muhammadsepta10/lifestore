@@ -55,9 +55,9 @@ export function urlOpsional(m: Masukan, kolom: string): string | null | undefine
   return v;
 }
 
-/** Harga dalam rupiah bulat, tidak negatif. */
-export function rupiah(v: unknown, kolom: string): number {
-  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) throw tidakValid(kolom, 'Harus rupiah bulat, tidak negatif.');
+/** Harga dalam hargaRupiah bulat, tidak negatif. */
+export function hargaRupiah(v: unknown, kolom: string): number {
+  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < 0) throw tidakValid(kolom, 'Harus hargaRupiah bulat, tidak negatif.');
   return v;
 }
 

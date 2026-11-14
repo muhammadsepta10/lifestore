@@ -7,9 +7,9 @@ import { pembayaran, tagihan, tagihanMeja } from '../database/schema';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { Jam } from '../umum/jam';
-import { ditolak, objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
+import { ditolak, idDipakai, idKlien, objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
-import { type BarisTagihan, idDipakai, idKlien, itemTagihan, mejaTagihan, pelakuAudit, pindahkanItem, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
+import { type BarisTagihan, itemTagihan, mejaTagihan, pelakuAudit, pindahkanItem, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 const MAKS_ITEM_PISAH = 500;
 

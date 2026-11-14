@@ -8,10 +8,10 @@ import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
 import { Jam } from '../umum/jam';
-import { objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { idDipakai, idKlien, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
 import { tanggalOperasional } from './nomor';
-import { idDipakai, idKlien, tagihanDiOutlet, tagihanLengkap, tagihanTerbuka } from './tagihan';
+import { tagihanDiOutlet, tagihanLengkap, tagihanTerbuka } from './tagihan';
 
 /** Kanal yang bisa dibuka dari kasir. Dine-in wajib memilih Meja. */
 const KANAL_KASIR: readonly Kanal[] = ['dine_in', 'bawa_pulang'];

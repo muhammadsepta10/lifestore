@@ -7,9 +7,9 @@ import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { type PermintaanItemPesanan, siapkanItemPesanan } from '../menu/item-pesanan';
 import { Jam } from '../umum/jam';
-import { angka, objek, teksOpsional, tidakValid } from '../umum/validasi';
+import { angka, idDipakai, idKlien, objek, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciPesanan, nomorBerikut, tanggalOperasional } from './nomor';
-import { idDipakai, idKlien, itemTagihan, STATUS_ITEM_AWAL, sudahBayarTunai, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
+import { itemTagihan, STATUS_ITEM_AWAL, sudahBayarTunai, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
 
 const MAKS_ITEM_PER_PESANAN = 100;
 const MAKS_JUMLAH = 999;

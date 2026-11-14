@@ -6,7 +6,7 @@ import { grupPilihan, hargaOutlet, menu, pilihan, varian } from '../database/sch
 import { PerluIzin } from '../izin/izin';
 import { Sesi, SesiGuard, type SesiPengguna } from '../identitas/sesi.guard';
 import { boolean, type Masukan, objek, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
-import { aturUrutan, bulat, idDaftar, pastikanKategori, pastikanMenu, pastikanMerek, rupiah, urlOpsional, urutanBerikutnya } from './bersama';
+import { aturUrutan, bulat, idDaftar, pastikanKategori, pastikanMenu, pastikanMerek, hargaRupiah, urlOpsional, urutanBerikutnya } from './bersama';
 
 type BarisMenu = typeof menu.$inferSelect;
 
@@ -124,7 +124,7 @@ export function varianValid(v: unknown): MasukanVarian[] {
   if (!Array.isArray(v)) throw tidakValid('varian', 'Harus daftar { nama, harga }.');
   return v.map((x, i) => {
     const o = objek(x);
-    return { id: idOpsional(o, `varian[${i}]`), nama: teks(o, 'nama', { maks: 100 }), harga: rupiah(o.harga, `varian[${i}].harga`) };
+    return { id: idOpsional(o, `varian[${i}]`), nama: teks(o, 'nama', { maks: 100 }), harga: hargaRupiah(o.harga, `varian[${i}].harga`) };
   });
 }
 
@@ -141,7 +141,7 @@ export function grupPilihanValid(v: unknown): MasukanGrup[] {
     if (!Array.isArray(o.pilihan) || o.pilihan.length === 0) throw tidakValid(`${kolom}.pilihan`, 'Minimal satu pilihan.');
     const daftarPilihan = o.pilihan.map((p, j) => {
       const po = objek(p);
-      return { id: idOpsional(po, `${kolom}.pilihan[${j}]`), nama: teks(po, 'nama', { maks: 100 }), harga: rupiah(po.harga, `${kolom}.pilihan[${j}].harga`) };
+      return { id: idOpsional(po, `${kolom}.pilihan[${j}]`), nama: teks(po, 'nama', { maks: 100 }), harga: hargaRupiah(po.harga, `${kolom}.pilihan[${j}].harga`) };
     });
     const maksimum = bulat(o.maksimum, `${kolom}.maksimum`, { min: 1, maks: daftarPilihan.length });
     const minimum = o.minimum === undefined ? 0 : bulat(o.minimum, `${kolom}.minimum`, { min: 0, maks: maksimum });
@@ -229,7 +229,7 @@ export class MenuController {
     const mk = await pastikanMerek(tx, merekId);
     const m = objek(body);
     const nama = teks(m, 'nama', { maks: 150 });
-    const harga = rupiah(m.harga, 'harga');
+    const harga = hargaRupiah(m.harga, 'harga');
     const deskripsi = teksOpsional(m, 'deskripsi', { maks: 1000 }) ?? null;
     const fotoUrl = urlOpsional(m, 'fotoUrl') ?? null;
     const bebasPajak = m.bebasPajak === undefined ? false : boolean(m, 'bebasPajak');
@@ -286,7 +286,7 @@ export class MenuController {
     const m = objek(body);
     const perubahan: Partial<typeof menu.$inferInsert> = {};
     if (m.nama !== undefined) perubahan.nama = teks(m, 'nama', { maks: 150 });
-    if (m.harga !== undefined) perubahan.harga = rupiah(m.harga, 'harga');
+    if (m.harga !== undefined) perubahan.harga = hargaRupiah(m.harga, 'harga');
     if (m.deskripsi !== undefined) perubahan.deskripsi = teksOpsional(m, 'deskripsi', { maks: 1000 });
     if (m.fotoUrl !== undefined) perubahan.fotoUrl = urlOpsional(m, 'fotoUrl');
     if (m.aktif !== undefined) perubahan.aktif = boolean(m, 'aktif');

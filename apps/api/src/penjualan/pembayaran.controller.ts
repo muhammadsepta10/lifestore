@@ -9,28 +9,9 @@ import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/pera
 import { JENIS_METODE_BAYAR, metodeBayarAktif } from '../pembayaran/metode-bayar.module';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
-import { angka, ditolak, type Masukan, objek, pilihan, teksOpsional, tidakValid } from '../umum/validasi';
+import { ditolak, idDipakai, idKlien, objek, pilihan, rupiah, teksOpsional } from '../umum/validasi';
 import { KUNCI_NOTA, nomorBerikut } from './nomor';
-import {
-  type BarisTagihan,
-  idDipakai,
-  idKlien,
-  itemTagihan,
-  nilaiMelunasi,
-  rincianTagihan,
-  tagihanDiOutlet,
-  tagihanLengkap,
-  tagihanSudahDitutup,
-  tampilkanPembayaran,
-} from './tagihan';
-
-const MAKS_RUPIAH = 1_000_000_000_000;
-
-function rupiah(m: Masukan, kolom: string): number {
-  const v = angka(m, kolom, { min: 1, maks: MAKS_RUPIAH });
-  if (!Number.isInteger(v)) throw tidakValid(kolom, 'Harus rupiah bulat.');
-  return v;
-}
+import { type BarisTagihan, itemTagihan, nilaiMelunasi, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup, tampilkanPembayaran } from './tagihan';
 
 /**
  * Tutup Tagihan yang sudah lunas: beri Nomor Nota berikutnya dari penghitung Outlet dan bekukan
@@ -102,8 +83,8 @@ export class PembayaranController {
     const m = objek(body);
     const id = idKlien(m);
     const metode = pilihan(m, 'metode', JENIS_METODE_BAYAR);
-    const jumlahDiminta = m.jumlah === undefined || m.jumlah === null ? undefined : rupiah(m, 'jumlah');
-    const diterimaTunai = metode === 'tunai' ? rupiah(m, 'diterima') : undefined;
+    const jumlahDiminta = m.jumlah === undefined || m.jumlah === null ? undefined : rupiah(m, 'jumlah', { min: 1 });
+    const diterimaTunai = metode === 'tunai' ? rupiah(m, 'diterima', { min: 1 }) : undefined;
     const referensi = teksOpsional(m, 'referensi', { maks: 100 }) ?? null;
     const tx = this.db.tenant();
     // Kunci Tagihan: Pembayaran paralel atau kiriman ulang untuk Tagihan yang sama antre di sini.

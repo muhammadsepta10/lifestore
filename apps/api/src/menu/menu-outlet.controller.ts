@@ -6,7 +6,7 @@ import { hargaOutlet, kategori, menu, menuHabis, menuStasiun } from '../database
 import { PerluIzin } from '../izin/izin';
 import { Sesi, SesiGuard, type SesiPengguna } from '../identitas/sesi.guard';
 import { boolean, objek, teks, tidakDitemukan, tidakValid } from '../umum/validasi';
-import { pastikanMenuDiOutlet, pastikanOutlet, pastikanStasiun, rupiah } from './bersama';
+import { pastikanMenuDiOutlet, pastikanOutlet, pastikanStasiun, hargaRupiah } from './bersama';
 import { tampilkanKategori } from './kategori.controller';
 import { type MenuLengkap, muatMenuLengkap, ringkasanHarga } from './menu.controller';
 
@@ -138,7 +138,7 @@ export class MenuOutletController {
     const tx = this.db.tenant();
     const sebelum = await menuDiOutlet(tx, outletId, menuId);
     const m = objek(body);
-    const harga = m.harga === null || m.harga === undefined ? null : rupiah(m.harga, 'harga');
+    const harga = m.harga === null || m.harga === undefined ? null : hargaRupiah(m.harga, 'harga');
     const varianOverride = varianOverrideValid(m.varian, new Set(sebelum.varian.map((v) => v.id)));
 
     await tx.delete(hargaOutlet).where(and(eq(hargaOutlet.outletId, outletId), eq(hargaOutlet.menuId, menuId)));
@@ -170,6 +170,6 @@ function varianOverrideValid(v: unknown, varianMenu: Set<string>): { varianId: s
     const o = objek(x);
     const varianId = teks(o, 'varianId', { maks: 64 });
     if (!varianMenu.has(varianId)) throw tidakDitemukan('Varian');
-    return { varianId, harga: o.harga === null ? null : rupiah(o.harga, `varian[${i}].harga`) };
+    return { varianId, harga: o.harga === null ? null : hargaRupiah(o.harga, `varian[${i}].harga`) };
   });
 }

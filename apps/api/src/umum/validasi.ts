@@ -54,6 +54,27 @@ export function angka(m: Masukan, kolom: string, opsi: { min: number; maks: numb
   return v;
 }
 
+/** Batas atas nilai rupiah yang diterima dari klien. */
+export const MAKS_RUPIAH = 1_000_000_000_000;
+
+/** Rupiah bulat dari masukan, minimal `min` (default 0). */
+export function rupiah(m: Masukan, kolom: string, opsi: { min?: number } = {}): number {
+  const v = angka(m, kolom, { min: opsi.min ?? 0, maks: MAKS_RUPIAH });
+  if (!Number.isInteger(v)) throw tidakValid(kolom, 'Harus rupiah bulat.');
+  return v;
+}
+
+/** ID buatan klien (opsional), sekaligus kunci idempoten perintah kasir. */
+export function idKlien(m: Masukan): string | undefined {
+  if (m.id === undefined || m.id === null) return undefined;
+  return teks(m, 'id', { maks: 64 });
+}
+
+/** ID buatan klien sudah dipakai untuk hal lain (termasuk oleh Tenant lain; tidak membocorkan apa pun). */
+export function idDipakai(): ConflictException {
+  return new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
+}
+
 export function pilihan<T extends string>(m: Masukan, kolom: string, daftar: readonly T[]): T {
   const v = m[kolom];
   if (typeof v !== 'string' || !(daftar as readonly string[]).includes(v)) {

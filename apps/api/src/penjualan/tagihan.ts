@@ -3,7 +3,7 @@ import { hitungTagihan, type Kanal, type RincianTagihan } from '@lifestore/domai
 import { and, asc, eq, inArray, notExists, or, sql } from 'drizzle-orm';
 import type { TxDb } from '../database/database';
 import { itemPesanan, kejadianItemPesanan, meja, pembayaran, pemindahanItemPesanan, pesanan, tagihan, tagihanMeja } from '../database/schema';
-import { type Masukan, teks, tidakDitemukan } from '../umum/validasi';
+import { tidakDitemukan } from '../umum/validasi';
 
 /**
  * Model baca Tagihan yang dipakai semua endpoint penjualan. Angka Tagihan SELALU dihitung di sini
@@ -16,17 +16,6 @@ export type BarisPembayaran = typeof pembayaran.$inferSelect;
 export type StatusItemPesanan = (typeof kejadianItemPesanan.$inferSelect)['status'];
 
 export const STATUS_ITEM_AWAL: StatusItemPesanan = 'menunggu';
-
-/** ID buatan klien (opsional), sekaligus kunci idempoten perintah kasir. */
-export function idKlien(m: Masukan): string | undefined {
-  if (m.id === undefined || m.id === null) return undefined;
-  return teks(m, 'id', { maks: 64 });
-}
-
-/** ID buatan klien sudah dipakai untuk hal lain (termasuk oleh Tenant lain; tidak membocorkan apa pun). */
-export function idDipakai(): ConflictException {
-  return new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
-}
 
 /** Item Pesanan yang belum masuk dapur: masih menunggu, atau ditahan sampai lunas (Outlet bayar-dulu). */
 export function belumDimasak(status: StatusItemPesanan): boolean {
@@ -304,6 +293,9 @@ export async function mejaTagihan(tx: TxDb, tagihanIds: string[]): Promise<MejaT
 export function nilaiMelunasi(p: Pick<BarisPembayaran, 'jumlah' | 'pembulatan'>): number {
   return p.jumlah - p.pembulatan;
 }
+
+/** `nilaiMelunasi` sebagai ekspresi SQL, untuk dijumlahkan di database. */
+export const sqlNilaiMelunasi = sql`${pembayaran.jumlah} - ${pembayaran.pembulatan}`;
 
 /** Pesanan yang itemnya (masih) ada di Tagihan ini, termasuk Pesanan asal item hasil Pisah Tagihan atau gabung Meja. */
 async function pesananTagihan(tx: TxDb, tagihanIds: string[], item: readonly ItemBerstatus[]) {

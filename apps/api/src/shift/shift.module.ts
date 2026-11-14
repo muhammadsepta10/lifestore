@@ -1,5 +1,5 @@
 import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, sql, sum } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sum } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
 import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift, tagihan } from '../database/schema';
@@ -8,25 +8,13 @@ import { SesiGuard } from '../identitas/sesi.guard';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { KaryawanModule } from '../karyawan/karyawan.module';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
+import { sqlNilaiMelunasi } from '../penjualan/tagihan';
 import { Jam } from '../umum/jam';
-import { angka, type Masukan, objek, pilihan, teks, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { idKlien, objek, pilihan, rupiah, teks, tidakDitemukan } from '../umum/validasi';
 
 type BarisShift = typeof shift.$inferSelect;
 
-const MAKS_RUPIAH = 1_000_000_000_000;
 const JENIS_KAS = ['masuk', 'keluar'] as const;
-
-function rupiah(m: Masukan, kolom: string, opsi: { min?: number } = {}): number {
-  const v = angka(m, kolom, { min: opsi.min ?? 0, maks: MAKS_RUPIAH });
-  if (!Number.isInteger(v)) throw tidakValid(kolom, 'Harus rupiah bulat.');
-  return v;
-}
-
-/** ID buatan klien (opsional) untuk perintah idempoten dari kasir. */
-function idKlien(m: Masukan): string | undefined {
-  if (m.id === undefined) return undefined;
-  return teks(m, 'id', { maks: 64 });
-}
 
 async function namaAnggota(tx: TxDb, ids: (string | null)[]): Promise<Map<string, string>> {
   const unik = [...new Set(ids.filter((x): x is string => x !== null))];
@@ -55,7 +43,7 @@ async function penjualanShift(tx: TxDb, shiftId: string) {
     .select({
       jenis: pembayaran.metode,
       jumlah: count(),
-      nilai: sum(sql`${pembayaran.jumlah} - ${pembayaran.pembulatan}`).mapWith(Number),
+      nilai: sum(sqlNilaiMelunasi).mapWith(Number),
       pembulatan: sum(pembayaran.pembulatan).mapWith(Number),
     })
     .from(pembayaran)

@@ -8,7 +8,7 @@ import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/pera
 import { type BuktiPersetujuan, buktiPersetujuanDari, PersetujuanAtasan } from '../karyawan/persetujuan-atasan';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
-import { angka, ditolak, objek, pilihan, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { angka, ditolak, objek, pilihan, rupiah, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, pelakuAudit, pernahBerisiItem, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 /**
@@ -18,7 +18,6 @@ import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibaya
 export const BATAS_DISKON_PERSEN: Record<string, number> = { manajer_outlet: 100, kasir: 10, pelayan: 0, dapur: 0 };
 
 const JENIS_DISKON = ['persen', 'nominal'] as const;
-const MAKS_RUPIAH = 1_000_000_000_000;
 
 /** Batas Diskon Manual Pelaku di satu Outlet: batas tertinggi dari Perannya di Outlet itu. */
 export function batasDiskonPersen(pelaku: Pick<Pelaku, 'peran' | 'penugasan'>, outletId: string): number {
@@ -233,8 +232,7 @@ export class KendaliController {
     const m = objek(body);
     const bukti = buktiPersetujuanDari(m.persetujuanAtasan);
     const jenis = pilihan(m, 'jenis', JENIS_DISKON);
-    const nilai = angka(m, 'nilai', jenis === 'persen' ? { min: 0.01, maks: 100 } : { min: 1, maks: MAKS_RUPIAH });
-    if (jenis === 'nominal' && !Number.isInteger(nilai)) throw tidakValid('nilai', 'Harus rupiah bulat.');
+    const nilai = jenis === 'persen' ? angka(m, 'nilai', { min: 0.01, maks: 100 }) : rupiah(m, 'nilai', { min: 1 });
     const alasan = teks(m, 'alasan', { maks: 200 });
     const tx = this.db.tenant();
     const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });

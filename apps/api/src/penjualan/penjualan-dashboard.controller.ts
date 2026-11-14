@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { and, count, desc, eq, gte, inArray, lt, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, sum } from 'drizzle-orm';
 import { Database, type TxDb } from '../database/database';
 import { outlet, pembayaran, tagihan } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
@@ -8,7 +8,7 @@ import { JENIS_METODE_BAYAR } from '../pembayaran/metode-bayar.module';
 import { Jam } from '../umum/jam';
 import { tanggal as tanggalValid, tidakDitemukan } from '../umum/validasi';
 import { tanggalOperasional } from './nomor';
-import { itemTagihan, mejaTagihan, tagihanDiOutlet, tagihanLengkap } from './tagihan';
+import { itemTagihan, mejaTagihan, sqlNilaiMelunasi, tagihanDiOutlet, tagihanLengkap } from './tagihan';
 
 /** Rentang waktu satu tanggal operasional (Asia/Jakarta, UTC+7 tanpa DST). */
 function rentangHari(tanggal: string): { mulai: Date; selesai: Date } {
@@ -54,7 +54,7 @@ export async function penjualanHarian(tx: TxDb, outletIds: string[], tanggal: st
       outletId: tagihan.outletId,
       jenis: pembayaran.metode,
       jumlah: count(),
-      nilai: sum(sql`${pembayaran.jumlah} - ${pembayaran.pembulatan}`).mapWith(Number),
+      nilai: sum(sqlNilaiMelunasi).mapWith(Number),
     })
     .from(pembayaran)
     .innerJoin(tagihan, eq(tagihan.id, pembayaran.tagihanId))
