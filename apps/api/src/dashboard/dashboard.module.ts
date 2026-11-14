@@ -14,7 +14,7 @@ import { tanggalOperasional } from '../penjualan/nomor';
 import { penjualanHarian } from '../penjualan/penjualan-dashboard.controller';
 import { Jam } from '../umum/jam';
 import { hariIni, tidakDitemukan, tidakValid } from '../umum/validasi';
-import { PerluIzin } from '../izin/izin';
+import { outletBerizin, type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 
 type BarisOutlet = typeof outlet.$inferSelect;
 
@@ -86,13 +86,17 @@ export class DashboardController {
     private readonly jam: Jam,
   ) {}
 
-  /** Dashboard: sisa Masa Coba, checklist Siap Jualan, dan penjualan hari ini per Outlet (data langsung). */
+  /**
+   * Dashboard: sisa Masa Coba, checklist Siap Jualan, dan penjualan hari ini per Outlet (data
+   * langsung). Hanya Outlet tempat Pelaku punya izin `dashboard.lihat`; Pemilik melihat semuanya.
+   */
   @Get('dashboard')
   @PerluIzin('dashboard.lihat')
-  async dashboard() {
+  async dashboard(@PelakuAktif() pelaku: Pelaku) {
     const tx = this.db.tenant();
     const [t] = await tx.select().from(tenant);
-    const daftarOutlet = await tx.select().from(outlet).orderBy(asc(outlet.createdAt), asc(outlet.id));
+    const lingkup = outletBerizin(pelaku, 'dashboard.lihat');
+    const daftarOutlet = (await tx.select().from(outlet).orderBy(asc(outlet.createdAt), asc(outlet.id))).filter((o) => lingkup === 'semua' || lingkup.includes(o.id));
     const hasilOutlet = [];
     const tanggal = tanggalOperasional(this.jam.sekarang());
     const penjualan = await penjualanHarian(
@@ -108,7 +112,7 @@ export class DashboardController {
       masaCoba: t!.masaCobaBerakhirPada
         ? { paketLangganan: 'Pro', berakhirPada: t!.masaCobaBerakhirPada, sisaHari: sisaHari(t!.masaCobaBerakhirPada) }
         : null,
-      /** Jumlah semua Outlet. */
+      /** Jumlah semua Outlet yang terlihat oleh Pelaku. */
       penjualanHariIni: {
         tanggal,
         penjualan: penjualan.reduce((s, x) => s + x.penjualan, 0),

@@ -1,9 +1,9 @@
 import { Controller, Get, Global, Injectable, Module, UseGuards } from '@nestjs/common';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { Database } from '../database/database';
 import { logAudit, pengguna } from '../database/schema';
 import { SesiGuard } from '../identitas/sesi.guard';
-import { PerluIzin } from '../izin/izin';
+import { outletBerizin, type Pelaku as PelakuBerizin, PelakuAktif, PerluIzin } from '../izin/izin';
 
 /** Siapa yang melakukan aksi. Sesi dashboard mengisi `penggunaId`; kasir nanti juga `perangkatId`. */
 export interface Pelaku {
@@ -58,7 +58,11 @@ export class PenulisLogAudit {
   }
 }
 
-/** Baca Log Audit Tenant aktif. Sengaja tidak ada rute ubah atau hapus. */
+/**
+ * Baca Log Audit Tenant aktif. Sengaja tidak ada rute ubah atau hapus. Peran berlingkup Outlet
+ * hanya melihat catatan Outlet tempat ia punya izin `log_audit.lihat`; catatan tingkat Tenant
+ * (tanpa Outlet) hanya untuk Pemilik.
+ */
 @Controller('log-audit')
 @UseGuards(SesiGuard)
 export class LogAuditController {
@@ -66,12 +70,15 @@ export class LogAuditController {
 
   @Get()
   @PerluIzin('log_audit.lihat')
-  async daftar() {
+  async daftar(@PelakuAktif() pelaku: PelakuBerizin) {
+    const lingkup = outletBerizin(pelaku, 'log_audit.lihat');
+    if (lingkup !== 'semua' && lingkup.length === 0) return [];
     const baris = await this.db
       .tenant()
       .select({ log: logAudit, email: pengguna.email })
       .from(logAudit)
       .leftJoin(pengguna, eq(pengguna.id, logAudit.penggunaId))
+      .where(lingkup === 'semua' ? undefined : inArray(logAudit.outletId, lingkup))
       .orderBy(desc(logAudit.createdAt), desc(logAudit.id))
       .limit(200);
     return baris.map(({ log, email }) => ({

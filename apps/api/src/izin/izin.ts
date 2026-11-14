@@ -98,6 +98,16 @@ export function punyaIzin(p: Pick<Pelaku, 'peran' | 'penugasan'>, izin: Izin, ou
   return relevan.some((t) => (IZIN_PERAN[t.peran as PeranBawaan] ?? []).includes(izin));
 }
 
+/**
+ * Outlet tempat Pelaku punya `izin`: `'semua'` untuk Pemilik, selain itu ID Outlet dari Penugasan
+ * yang Perannya memuat izin itu. Dipakai rute tingkat Tenant (Dashboard, Log Audit) supaya Peran
+ * berlingkup Outlet hanya melihat data Outlet-nya.
+ */
+export function outletBerizin(p: Pick<Pelaku, 'peran' | 'penugasan'>, izin: Izin): 'semua' | string[] {
+  if (p.peran === PERAN_PEMILIK) return 'semua';
+  return [...new Set(p.penugasan.map((t) => t.outletId))].filter((outletId) => punyaIzin(p, izin, outletId));
+}
+
 /** Semua izin Pelaku di satu Outlet (untuk UI kasir). */
 export function daftarIzin(p: Pick<Pelaku, 'peran' | 'penugasan'>, outletId: string | null): Izin[] {
   return IZIN.filter((i) => punyaIzin(p, i, outletId));
