@@ -105,7 +105,7 @@ describe('Kendali kasir: batal, void, Diskon Manual, buka laci', () => {
     });
 
     // Item yang sudah disajikan tidak bisa dibatalkan, dengan PIN atasan sekalipun.
-    await majukan([itemIds[1]!], 'disajikan');
+    for (const status of ['dimasak', 'siap', 'disajikan']) await majukan([itemIds[1]!], status);
     const disajikan = await kasir.post(`/v1/tagihan/${id}/item/${itemIds[1]}/batal`, { alasan: 'x', ...atasan() });
     expect(disajikan.status).toBe(409);
     expect(disajikan.body.kode).toBe('item_sudah_disajikan');

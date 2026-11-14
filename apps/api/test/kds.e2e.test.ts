@@ -105,6 +105,9 @@ describe('KDS: Item Pesanan per Stasiun', () => {
     const idNasgor = layarDapur.item[0]!.id;
     const idTeh = semua.item[1]!.id;
     const maju = (itemIds: string[], status: string) => layar.post('/v1/kds/status', { itemIds, status });
+    // Status maju satu langkah demi satu langkah: melompat dari menunggu ke siap atau disajikan tidak mengubah apa pun.
+    expect((await maju([idNasgor], 'siap').expect(200)).body.item).toEqual([{ id: idNasgor, status: 'menunggu' }]);
+    expect((await kasir.post('/v1/kds/status', { itemIds: [idNasgor], status: 'disajikan' }).expect(200)).body.item).toEqual([{ id: idNasgor, status: 'menunggu' }]);
     expect((await maju([idNasgor], 'dimasak').expect(200)).body.item).toEqual([{ id: idNasgor, status: 'dimasak' }]);
     expect(ringkas(await kds(layar, dapur))).toEqual([['A-001', 'Nasi Goreng', 2, 'dimasak']]);
     // Kasir melihat status dapur setiap Item Pesanan dan status Pesanan turunannya.
@@ -115,6 +118,7 @@ describe('KDS: Item Pesanan per Stasiun', () => {
     await maju([idNasgor], 'siap').expect(200);
     expect((await kds(layar)).siapDiserahkan).toEqual([]);
     expect((await kasir.get('/v1/siap-diambil').expect(200)).body).toEqual([]);
+    await maju([idTeh], 'dimasak').expect(200);
     await maju([idTeh], 'siap').expect(200);
     // Semua item siap: Pesanan masuk deret "Siap diserahkan" dan daftar Siap Diambil kasir.
     const siap = await kds(layar, dapur);

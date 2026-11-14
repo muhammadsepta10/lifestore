@@ -247,7 +247,9 @@ export class KdsController {
 
   /**
    * Majukan status Item Pesanan (boleh beberapa sekaligus: baris gabungan di layar). Status hanya
-   * bisa maju; item yang sudah di status itu, lebih jauh, atau batal dilewati tanpa error.
+   * maju satu langkah (`menunggu → dimasak → siap → disajikan`); item yang tidak tepat satu langkah
+   * di belakang status tujuan (sudah di sana, lebih jauh, masih terlalu awal, ditahan, atau batal)
+   * dilewati tanpa error dan jawabannya memuat status item yang sebenarnya.
    * Memasak dan menandai siap butuh izin KDS; menandai disajikan juga boleh dari kasir.
    */
   @Post('status')
@@ -282,7 +284,7 @@ export class KdsController {
     const maju = itemIds.filter((id) => {
       const s = kini.get(id) ?? 'menunggu';
       // Item batal dilewati; item yang ditahan (Outlet bayar-dulu) belum masuk dapur sampai Tagihannya lunas.
-      return s !== 'batal' && s !== 'ditahan' && URUTAN_STATUS.indexOf(s) < URUTAN_STATUS.indexOf(tujuan);
+      return s !== 'batal' && s !== 'ditahan' && URUTAN_STATUS.indexOf(s) === URUTAN_STATUS.indexOf(tujuan) - 1;
     });
     if (maju.length > 0) {
       await tx
