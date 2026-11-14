@@ -11,6 +11,7 @@ import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
 import { angka, ditolak, idKlien, objek, pilihan, rupiah, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, pelakuAudit, pernahBerisiItem, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
+import { Skema } from '../openapi-skema';
 
 /**
  * Batas Diskon Manual (persen dari subtotal) per Peran. Di atas batas butuh Persetujuan Atasan
@@ -72,6 +73,7 @@ export class KendaliController {
    * Batalkan satu Item Pesanan. Yang masih `menunggu` tanpa persetujuan; yang sudah `dimasak` atau
    * `siap` butuh alasan dan Persetujuan Atasan, dan ditandai Waste. Item `disajikan` tidak bisa dibatalkan.
    */
+  @Skema('batalItem')
   @Post('item/:itemId/batal')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
@@ -159,6 +161,7 @@ export class KendaliController {
    * dibekukan sebagai nilai void; Tagihan void tidak mendapat Nomor Nota.
    * Mengirim ulang dengan `id` yang sama mengembalikan Tagihan itu tanpa menjalankan void lagi.
    */
+  @Skema('voidTagihan')
   @Post('void')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
@@ -233,6 +236,7 @@ export class KendaliController {
    * Mengirim ulang dengan `id` yang sama tidak memasang diskon itu lagi (dan tidak menimpa diskon
    * yang dipasang sesudahnya); jawabannya Tagihan dalam keadaan sekarang.
    */
+  @Skema('diskonManual')
   @Put('diskon')
   @PerluIzin('kasir.buka')
   async diskon(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Param('tagihanId') tagihanId: string, @Body() body: unknown) {
@@ -320,6 +324,7 @@ export class LaciController {
    * endpoint ini memberi izin dan menulis Log Audit. Mengirim ulang dengan `id` yang sama
    * mengembalikan jawaban pertama tanpa mencatat pembukaan kedua.
    */
+  @Skema('bukaLaci')
   @Post('buka')
   @HttpCode(200)
   @PerluIzin('kasir.buka')

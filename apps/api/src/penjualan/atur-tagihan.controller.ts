@@ -11,6 +11,7 @@ import { Jam } from '../umum/jam';
 import { ditolak, idDipakai, idKlien, objek, teks, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
 import { type BarisTagihan, itemTagihan, mejaTagihan, pelakuAudit, pindahkanItem, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
+import { Skema } from '../openapi-skema';
 
 const MAKS_ITEM_PISAH = 500;
 
@@ -58,6 +59,7 @@ export class AturTagihanController {
    * Pindah Tagihan ke Meja lain yang Kosong. Tagihannya tetap satu; Meja lama menjadi Kosong.
    * Mengirim ulang dengan `id` yang sama tidak memindahkan lagi; jawabannya Tagihan sekarang.
    */
+  @Skema('pindahMeja')
   @Post('pindah-meja')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
@@ -97,6 +99,7 @@ export class AturTagihanController {
    * `digabung`, sehingga rombongan tetap satu Tagihan. Mengirim ulang dengan `id` yang sama tidak
    * menggabung lagi; jawabannya Tagihan sekarang.
    */
+  @Skema('gabungMeja')
   @Post('gabung-meja')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
@@ -176,6 +179,7 @@ export class AturTagihanController {
    * Pajak sama dengan Tagihan asal). Mengirim ulang dengan `id` yang sama mengembalikan Tagihan baru
    * yang sudah dibuat. Berbeda dari Bayar Terpisah (beberapa Pembayaran untuk satu Tagihan).
    */
+  @Skema('pisahTagihan')
   @Post('pisah')
   @PerluIzin('kasir.buka')
   async pisah(

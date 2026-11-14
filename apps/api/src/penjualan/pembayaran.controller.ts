@@ -12,6 +12,7 @@ import { Jam } from '../umum/jam';
 import { ditolak, idDipakai, idKlien, objek, pilihan, rupiah, teksOpsional } from '../umum/validasi';
 import { KUNCI_NOTA, nomorBerikut } from './nomor';
 import { type BarisTagihan, itemTagihan, nilaiMelunasi, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup, tampilkanPembayaran } from './tagihan';
+import { Skema } from '../openapi-skema';
 
 /**
  * Tutup Tagihan yang sudah lunas: beri Nomor Nota berikutnya dari penghitung Outlet dan bekukan
@@ -71,6 +72,7 @@ export class PembayaranController {
    *
    * Mengirim ulang dengan `id` yang sama mengembalikan Pembayaran yang sudah tersimpan.
    */
+  @Skema('bayar')
   @Post()
   @PerluIzin('kasir.buka')
   async bayar(

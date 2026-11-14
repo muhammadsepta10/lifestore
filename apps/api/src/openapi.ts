@@ -3,6 +3,7 @@ import { ModulesContainer } from '@nestjs/core';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { SesiGuard } from './identitas/sesi.guard';
 import { PerangkatGuard } from './karyawan/perangkat';
+import { SKEMA_KOMPONEN } from './openapi-skema';
 
 /** Alamat dokumen OpenAPI (JSON), di bawah awalan versi. */
 export const JALUR_OPENAPI = 'v1/openapi.json';
@@ -21,8 +22,9 @@ function guardDari(target: object | undefined): unknown[] {
  * controller NestJS, dan jenis autentikasi tiap operasi dari guard-nya (sesi Pengguna untuk
  * dashboard, token Perangkat Terdaftar untuk kasir/KDS). Tidak ada berkas spesifikasi tulisan tangan.
  *
- * Batasan: body dan respons belum punya skema, karena validasi masukan ditulis tangan
- * (`umum/validasi.ts`) tanpa kelas DTO.
+ * Body dan respons perintah kasir berskema lewat dekorator `@Skema` di handler-nya
+ * (`openapi-skema.ts`). Batasan: rute dashboard dan rute baca belum punya skema body/respons,
+ * karena validasi masukan ditulis tangan (`umum/validasi.ts`) tanpa kelas DTO.
  */
 export function buatDokumenOpenApi(app: INestApplication): OpenAPIObject {
   const konfigurasi = new DocumentBuilder()
@@ -39,6 +41,8 @@ export function buatDokumenOpenApi(app: INestApplication): OpenAPIObject {
     deepScanRoutes: true,
     operationIdFactory: (controller, handler) => `${controller}.${handler}`,
   });
+
+  dokumen.components = { ...dokumen.components, schemas: { ...dokumen.components?.schemas, ...SKEMA_KOMPONEN } };
 
   const controller = new Map<string, Type>();
   for (const modul of app.get(ModulesContainer).values()) {

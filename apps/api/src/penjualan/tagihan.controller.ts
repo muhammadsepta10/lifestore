@@ -12,6 +12,7 @@ import { idDipakai, idKlien, objek, pilihan, teks, teksOpsional, tidakDitemukan,
 import { kunciMeja, mejaTerisi, penghuniMeja } from './meja-tagihan';
 import { tanggalOperasional } from './nomor';
 import { tagihanDiOutlet, tagihanLengkap, tagihanTerbuka } from './tagihan';
+import { Skema } from '../openapi-skema';
 
 /** Kanal yang bisa dibuka dari kasir. Dine-in wajib memilih Meja. */
 const KANAL_KASIR: readonly Kanal[] = ['dine_in', 'bawa_pulang'];
@@ -36,6 +37,7 @@ export class TagihanController {
    * Buka Tagihan baru. Profil Pajak yang berlaku hari ini disalin ke Tagihan.
    * Mengirim ulang dengan `id` yang sama mengembalikan Tagihan yang sudah dibuka (idempoten).
    */
+  @Skema('bukaTagihan')
   @Post()
   @PerluIzin('kasir.buka')
   async buka(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {

@@ -10,6 +10,7 @@ import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/pera
 import { kejadianTerakhir, statusItemPesanan, statusPesanan, type StatusItemPesanan, tagihanSetelahPindah } from '../penjualan/tagihan';
 import { Jam } from '../umum/jam';
 import { objek, pilihan, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { Skema } from '../openapi-skema';
 
 /**
  * Dapur (KDS): Item Pesanan per Stasiun untuk layar dapur di Perangkat Terdaftar, perubahan
@@ -252,6 +253,7 @@ export class KdsController {
    * dilewati tanpa error dan jawabannya memuat status item yang sebenarnya.
    * Memasak dan menandai siap butuh izin KDS; menandai disajikan juga boleh dari kasir.
    */
+  @Skema('statusItem')
   @Post('status')
   @HttpCode(200)
   @SemuaAnggota()

@@ -11,7 +11,8 @@ import { KaryawanModule } from '../karyawan/karyawan.module';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { sqlNilaiMelunasi } from '../penjualan/tagihan';
 import { Jam } from '../umum/jam';
-import { idKlien, objek, pilihan, rupiah, teks, tidakDitemukan } from '../umum/validasi';
+import { idDipakai, idKlien, objek, pilihan, rupiah, teks, tidakDitemukan } from '../umum/validasi';
+import { Skema } from '../openapi-skema';
 
 type BarisShift = typeof shift.$inferSelect;
 
@@ -162,6 +163,7 @@ export class ShiftKasirController {
    * Buka Shift dengan modal awal laci. Satu Shift terbuka per Perangkat Terdaftar.
    * Mengirim ulang dengan `id` yang sama mengembalikan Shift yang sudah dibuka (idempoten).
    */
+  @Skema('bukaShift')
   @Post()
   @PerluIzin('kasir.buka')
   async buka(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
@@ -194,14 +196,15 @@ export class ShiftKasirController {
         res.status(200);
         return tampilkanShiftTerbuka(tx, lama);
       }
-      if (lama && lama.status === 'terbuka' && lama.perangkatId !== p.id) throw new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
+      if (lama && lama.status === 'terbuka' && lama.perangkatId !== p.id) throw idDipakai();
     }
     const terbuka = await shiftTerbuka(tx, p.id);
     if (terbuka) throw shiftSudahTerbuka(terbuka.id);
-    throw new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
+    throw idDipakai();
   }
 
   /** Catat kas masuk atau kas keluar dengan alasan. Idempoten dengan `id` buatan klien. */
+  @Skema('kasShift')
   @Post(':id/kas')
   @PerluIzin('kasir.buka')
   async kas(
@@ -221,7 +224,7 @@ export class ShiftKasirController {
     if (id) {
       const [lama] = await tx.select().from(kasShift).where(eq(kasShift.id, id));
       if (lama) {
-        if (lama.shiftId !== s.id) throw new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
+        if (lama.shiftId !== s.id) throw idDipakai();
         res.status(200);
         return tampilkanKas(lama);
       }
@@ -240,6 +243,7 @@ export class ShiftKasirController {
    * angka sistem; kas seharusnya dan selisih dihitung, dibekukan, lalu dikembalikan sebagai Laporan Shift.
    * Mengirim ulang dengan `id` yang sama mengembalikan Laporan Shift yang sudah dibekukan.
    */
+  @Skema('tutupShift')
   @Post(':id/tutup')
   @HttpCode(200)
   @PerluIzin('kasir.buka')

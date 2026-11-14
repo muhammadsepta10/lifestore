@@ -10,6 +10,7 @@ import { Jam } from '../umum/jam';
 import { angka, idDipakai, idKlien, objek, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciPesanan, nomorBerikut, tanggalOperasional } from './nomor';
 import { itemTagihan, STATUS_ITEM_AWAL, sudahBayarTunai, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
+import { Skema } from '../openapi-skema';
 
 const MAKS_ITEM_PER_PESANAN = 100;
 const MAKS_JUMLAH = 999;
@@ -59,6 +60,7 @@ export class PesananController {
    * Pesanan mendapat Nomor Pesanan harian berawalan perangkat. Mengirim ulang dengan `id` yang sama
    * mengembalikan Pesanan yang sudah tersimpan tanpa menggandakannya.
    */
+  @Skema('kirimPesanan')
   @Post()
   @PerluIzin('kasir.buka')
   async kirim(
