@@ -1,0 +1,66 @@
+# Stack lokal (ADR 0005): Caddy, web, api, Postgres.
+# Nyalakan dengan `pnpm stack:up`, lalu buka http://localhost:8080.
+# Kata sandi di sini hanya untuk lokal; staging/production memakai file .env di VPS (tidak di-commit).
+name: lifestore
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lifestore_owner
+      POSTGRES_PASSWORD: lifestore_dev
+      POSTGRES_DB: lifestore
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifestore_owner -d lifestore"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Migrasi: perintah terpisah, tidak otomatis saat api menyala.
+  #   docker compose run --rm migrate
+  migrate:
+    profiles: ["tools"]
+    build: { context: ., target: api }
+    command: ["node", "dist/database/migrate.cli.js"]
+    environment:
+      DATABASE_ADMIN_URL: postgres://lifestore_owner:lifestore_dev@postgres:5432/lifestore
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    build: { context: ., target: api }
+    environment:
+      # Peran login tanpa BYPASSRLS, anggota lifestore_app (lihat docker/postgres/init).
+      DATABASE_URL: postgres://lifestore_api:lifestore_dev@postgres:5432/lifestore
+      PORT: "3001"
+      # Tautan verifikasi email. Tanpa RESEND_API_KEY, email ditulis ke log api (lokal).
+      WEB_URL: http://localhost:8080
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_PENGIRIM: ${EMAIL_PENGIRIM:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    build: { context: ., target: web }
+    environment:
+      API_INTERNAL_URL: http://api:3001
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - api
+
+volumes:
+  postgres-data:

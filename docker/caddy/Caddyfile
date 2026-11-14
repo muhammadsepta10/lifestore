@@ -1,0 +1,9 @@
+# Lokal: HTTP di port 80 kontainer (8080 di host). Production memakai nama domain untuk TLS otomatis.
+:80 {
+	handle_path /api/* {
+		reverse_proxy api:3001
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
