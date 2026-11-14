@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
+import { klaimPerintah } from '../database/perintah-klien';
 import { pembayaran, tagihan, tagihanMeja } from '../database/schema';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
@@ -13,12 +14,10 @@ import { type BarisTagihan, itemTagihan, mejaTagihan, pelakuAudit, pindahkanItem
 
 const MAKS_ITEM_PISAH = 500;
 
-/** Tagihan dine-in terbuka milik Outlet, terkunci; selain itu 404/409. */
-async function tagihanDineInTerbuka(tx: TxDb, outletId: string, id: string): Promise<BarisTagihan> {
-  const t = await tagihanDiOutlet(tx, outletId, id, { kunci: true });
+/** Hanya Tagihan dine-in yang masih terbuka yang bisa dipindah atau digabung; selain itu 409. */
+function pastikanDineInTerbuka(t: BarisTagihan): void {
   if (t.status !== 'terbuka') throw tagihanSudahDitutup();
   if (t.kanal !== 'dine_in') throw ditolak('bukan_dine_in', 'Hanya Tagihan dine-in yang menempati Meja.');
-  return t;
 }
 
 /**
@@ -55,14 +54,22 @@ export class AturTagihanController {
     return (await mejaTagihan(tx, [tagihanId])).map((m) => m.id);
   }
 
-  /** Pindah Tagihan ke Meja lain yang Kosong. Tagihannya tetap satu; Meja lama menjadi Kosong. */
+  /**
+   * Pindah Tagihan ke Meja lain yang Kosong. Tagihannya tetap satu; Meja lama menjadi Kosong.
+   * Mengirim ulang dengan `id` yang sama tidak memindahkan lagi; jawabannya Tagihan sekarang.
+   */
   @Post('pindah-meja')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
   async pindahMeja(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Param('tagihanId') tagihanId: string, @Body() body: unknown) {
-    const mejaId = teks(objek(body), 'mejaId', { maks: 64 });
+    const m = objek(body);
+    const mejaId = teks(m, 'mejaId', { maks: 64 });
     const tx = this.db.tenant();
-    const t = await tagihanDineInTerbuka(tx, p.outletId, tagihanId);
+    const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });
+    if ((await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'pindah_meja', entitasId: t.id })) !== 'baru') {
+      return tagihanLengkap(tx, t);
+    }
+    pastikanDineInTerbuka(t);
     const tujuan = await kunciMeja(tx, p.outletId, mejaId);
     const orangLain = (await penghuniMeja(tx, tujuan.id)).find((id) => id !== t.id);
     if (orangLain) throw mejaTerisi(tujuan.label, orangLain);
@@ -87,15 +94,21 @@ export class AturTagihanController {
   /**
    * Gabung Meja ke Tagihan ini. Meja Kosong langsung ikut ditempati. Bila Meja itu terisi Tagihan
    * lain, Item Pesanan dan Meja Tagihan lain dipindahkan ke Tagihan ini dan Tagihan lain berstatus
-   * `digabung`, sehingga rombongan tetap satu Tagihan.
+   * `digabung`, sehingga rombongan tetap satu Tagihan. Mengirim ulang dengan `id` yang sama tidak
+   * menggabung lagi; jawabannya Tagihan sekarang.
    */
   @Post('gabung-meja')
   @HttpCode(200)
   @PerluIzin('kasir.buka')
   async gabungMeja(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku, @Param('tagihanId') tagihanId: string, @Body() body: unknown) {
-    const mejaId = teks(objek(body), 'mejaId', { maks: 64 });
+    const m = objek(body);
+    const mejaId = teks(m, 'mejaId', { maks: 64 });
     const tx = this.db.tenant();
-    const t = await tagihanDineInTerbuka(tx, p.outletId, tagihanId);
+    const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });
+    if ((await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'gabung_meja', entitasId: t.id })) !== 'baru') {
+      return tagihanLengkap(tx, t);
+    }
+    pastikanDineInTerbuka(t);
     const tujuan = await kunciMeja(tx, p.outletId, mejaId);
     const penghuni = await penghuniMeja(tx, tujuan.id);
     const mejaSebelum = await this.mejaIds(tx, t.id);

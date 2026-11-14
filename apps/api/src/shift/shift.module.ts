@@ -2,6 +2,7 @@ import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Post
 import { and, asc, count, desc, eq, inArray, sum } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
+import { klaimPerintah } from '../database/perintah-klien';
 import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift, tagihan } from '../database/schema';
 import { JENIS_METODE_BAYAR } from '../pembayaran/metode-bayar.module';
 import { SesiGuard } from '../identitas/sesi.guard';
@@ -237,6 +238,7 @@ export class ShiftKasirController {
   /**
    * Tutup Shift dengan Hitung Buta. Kasir mengirim hasil hitung uang di laci TANPA pernah melihat
    * angka sistem; kas seharusnya dan selisih dihitung, dibekukan, lalu dikembalikan sebagai Laporan Shift.
+   * Mengirim ulang dengan `id` yang sama mengembalikan Laporan Shift yang sudah dibekukan.
    */
   @Post(':id/tutup')
   @HttpCode(200)
@@ -247,6 +249,9 @@ export class ShiftKasirController {
     const tx = this.db.tenant();
     // Kunci Shift dulu: Pembayaran yang sedang berjalan selesai sebelum kas seharusnya dihitung.
     const s = await this.shiftPerangkat(tx, p, shiftId, { kunci: true });
+    if ((await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'tutup_shift', entitasId: s.id })) !== 'baru') {
+      return laporanShift(tx, s);
+    }
     if (s.status !== 'terbuka') throw shiftDitutup();
     const kasSeharusnya = await hitungKasSeharusnya(tx, s);
     const [ditutup] = await tx

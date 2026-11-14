@@ -2,13 +2,14 @@ import { Body, Controller, Delete, ForbiddenException, HttpCode, Param, Post, Pu
 import { and, eq } from 'drizzle-orm';
 import { PenulisLogAudit } from '../audit/audit.module';
 import { Database } from '../database/database';
+import { klaimPerintah } from '../database/perintah-klien';
 import { kejadianItemPesanan, pembayaran, tagihan } from '../database/schema';
 import { type Pelaku, PelakuAktif, PERAN_PEMILIK, PerluIzin, punyaIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { type BuktiPersetujuan, buktiPersetujuanDari, PersetujuanAtasan } from '../karyawan/persetujuan-atasan';
 import { kunciShiftTerbuka } from '../shift/shift.module';
 import { Jam } from '../umum/jam';
-import { angka, ditolak, objek, pilihan, rupiah, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
+import { angka, ditolak, idKlien, objek, pilihan, rupiah, teks, teksOpsional, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { type BarisTagihan, belumDimasak, itemTagihan, pastikanTotalDiAtasDibayar, pelakuAudit, pernahBerisiItem, rincianTagihan, tagihanDiOutlet, tagihanLengkap, tagihanSudahDitutup } from './tagihan';
 
 /**
@@ -156,6 +157,7 @@ export class KendaliController {
    * Void Tagihan terbuka yang berisi item: wajib alasan dan Persetujuan Atasan. Item yang belum
    * disajikan ikut batal (yang sudah dimasak ditandai Waste) supaya dapur berhenti. Angka Tagihan
    * dibekukan sebagai nilai void; Tagihan void tidak mendapat Nomor Nota.
+   * Mengirim ulang dengan `id` yang sama mengembalikan Tagihan itu tanpa menjalankan void lagi.
    */
   @Post('void')
   @HttpCode(200)
@@ -166,6 +168,9 @@ export class KendaliController {
     const alasan = teks(m, 'alasan', { maks: 200 });
     const tx = this.db.tenant();
     const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });
+    if ((await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'void_tagihan', entitasId: t.id })) !== 'baru') {
+      return tagihanLengkap(tx, t);
+    }
     if (t.status !== 'terbuka') throw tagihanSudahDitutup();
     const item = await itemTagihan(tx, [t.id]);
     if (item.length === 0) throw ditolak('tagihan_tanpa_item', 'Tagihan tanpa item cukup dibatalkan, tidak perlu void.');
@@ -225,6 +230,8 @@ export class KendaliController {
   /**
    * Pasang Diskon Manual (persen atau nominal rupiah) dengan alasan wajib. Dibatasi persentase per
    * Peran; di atas batas butuh Persetujuan Atasan. Nominal dinilai sebagai persen dari subtotal saat ini.
+   * Mengirim ulang dengan `id` yang sama tidak memasang diskon itu lagi (dan tidak menimpa diskon
+   * yang dipasang sesudahnya); jawabannya Tagihan dalam keadaan sekarang.
    */
   @Put('diskon')
   @PerluIzin('kasir.buka')
@@ -236,6 +243,9 @@ export class KendaliController {
     const alasan = teks(m, 'alasan', { maks: 200 });
     const tx = this.db.tenant();
     const t = await tagihanDiOutlet(tx, p.outletId, tagihanId, { kunci: true });
+    if ((await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'diskon_manual', entitasId: t.id })) !== 'baru') {
+      return tagihanLengkap(tx, t);
+    }
     if (t.status !== 'terbuka') throw tagihanSudahDitutup();
     const item = await itemTagihan(tx, [t.id]);
     const { subtotal } = rincianTagihan({ ...t, diskonJenis: null, diskonNilai: null }, item);
@@ -307,7 +317,8 @@ export class LaciController {
 
   /**
    * Catat pembukaan laci tanpa transaksi. Laci fisik dibuka oleh perangkat (Agen Cetak, menyusul);
-   * endpoint ini memberi izin dan menulis Log Audit.
+   * endpoint ini memberi izin dan menulis Log Audit. Mengirim ulang dengan `id` yang sama
+   * mengembalikan jawaban pertama tanpa mencatat pembukaan kedua.
    */
   @Post('buka')
   @HttpCode(200)
@@ -317,8 +328,11 @@ export class LaciController {
     const bukti = buktiPersetujuanDari(m.persetujuanAtasan);
     const alasan = teks(m, 'alasan', { maks: 200 });
     const { penyetujuAnggotaId } = await this.persetujuan.pastikan(pelaku, 'laci.buka_tanpa_transaksi', p.outletId, bukti);
-    const shiftId = await kunciShiftTerbuka(this.db.tenant(), p.id);
-    const dibukaPada = this.jam.sekarang();
+    const tx = this.db.tenant();
+    const hasil = { dibuka: true, shiftId: await kunciShiftTerbuka(tx, p.id), dibukaPada: this.jam.sekarang(), penyetujuAnggotaId };
+    const klaim = await klaimPerintah(tx, idKlien(m), { tenantId: p.tenantId, outletId: p.outletId, jenis: 'buka_laci_tanpa_transaksi', entitasId: p.id, hasil });
+    if (klaim !== 'baru') return klaim.hasil;
+    const { shiftId, dibukaPada } = hasil;
     await this.audit.catat({
       aksi: 'buka_laci_tanpa_transaksi',
       entitas: 'perangkat',
@@ -329,6 +343,6 @@ export class LaciController {
       alasan,
       penyetujuAnggotaId,
     });
-    return { dibuka: true, shiftId, dibukaPada, penyetujuAnggotaId };
+    return hasil;
   }
 }
