@@ -93,7 +93,11 @@ export class IdentitasController {
     return { email: alamat };
   }
 
-  /** Verifikasi email: mendirikan Tenant, Merek default, Outlet pertama, dan Masa Coba sekaligus. */
+  /**
+   * Verifikasi email: mendirikan Tenant, Merek default, Outlet pertama, dan Masa Coba sekaligus.
+   * Sengaja hanya POST: halaman web memanggilnya saat tombol konfirmasi ditekan, bukan saat tautan
+   * di email dibuka, supaya pemindai tautan tidak menghabiskan token.
+   */
   @Post('verifikasi-email')
   @HttpCode(200)
   async verifikasi(@Body() body: unknown): Promise<{ tenantId: string }> {
@@ -172,20 +176,6 @@ export class IdentitasController {
     if (!dipilih) throw new ForbiddenException({ kode: 'bukan_anggota', pesan: 'Anda bukan Anggota Tenant ini.' });
     await this.db.global.update(sesi).set({ tenantAktifId: tenantId }).where(eq(sesi.id, s.id));
     return { tenantAktifId: tenantId };
-  }
-
-  /** Pengguna yang sudah masuk mendirikan Tenant (usaha) lain dengan Masa Coba sendiri. */
-  @Post('tenant')
-  @HttpCode(201)
-  @UseGuards(SesiGuard)
-  @TanpaTenant()
-  async tenantBaru(@Body() body: unknown, @Sesi() s: SesiPengguna) {
-    const m = objek(body);
-    const namaUsaha = teks(m, 'namaUsaha', { maks: 100 });
-    const kota = teks(m, 'kota', { maks: 100 });
-    const tenantId = randomUUID();
-    await this.db.denganTenant({ tenantId }, (tx) => dirikanTenant(tx, { tenantId, penggunaId: s.penggunaId, namaUsaha, kota }));
-    return { id: tenantId, nama: namaUsaha };
   }
 
   @Post('keluar')

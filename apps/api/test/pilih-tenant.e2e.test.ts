@@ -10,7 +10,11 @@ describe('Pengguna dengan lebih dari satu Tenant memilih Tenant', () => {
 
   it('setelah masuk, Pengguna dengan dua Tenant harus memilih Tenant, lalu hanya melihat data Tenant itu', async () => {
     const pemilik = await dunia.daftarTenant({ namaUsaha: 'Sate Pak Dul', kota: 'Bandung' });
-    const tenantKedua = await pemilik.dirikanTenantLain({ namaUsaha: 'Kopi Pak Dul', kota: 'Garut' });
+    // Tenant kedua didapat lewat undangan: Pengguna yang sama menjadi Anggota di usaha orang lain.
+    const pemilikLain = await dunia.daftarTenant({ namaUsaha: 'Kopi Pak Dul', kota: 'Garut' });
+    await pemilikLain.tambahKaryawan({ email: pemilik.email, penugasan: [{ outletId: pemilikLain.outletId, peran: 'manajer_outlet' }] });
+    await dunia.http.post('/v1/undangan/terima').send({ token: dunia.email.tokenUndanganUntuk(pemilik.email) }).expect(200);
+    const tenantKedua = pemilikLain.tenantId;
 
     const sesi = await dunia.masuk(pemilik.email, pemilik.kataSandi);
     expect(sesi.tenant.map((t) => t.nama)).toEqual(['Sate Pak Dul', 'Kopi Pak Dul']);
@@ -29,6 +33,12 @@ describe('Pengguna dengan lebih dari satu Tenant memilih Tenant', () => {
 
     const info = await sesi.get('/v1/sesi').expect(200);
     expect(info.body).toMatchObject({ pengguna: { email: pemilik.email }, tenantAktifId: pemilik.tenantId });
+  });
+
+  it('Pengguna yang sudah masuk tidak bisa mendirikan Tenant tambahan dengan Masa Coba baru', async () => {
+    const pemilik = await dunia.daftarTenant();
+    await pemilik.post('/v1/tenant', { namaUsaha: 'Usaha Kedua', kota: 'Surabaya' }).expect(404);
+    expect((await dunia.masuk(pemilik.email, pemilik.kataSandi)).tenant).toHaveLength(1);
   });
 
   it('Pengguna tidak bisa memilih Tenant tempat ia bukan Anggota', async () => {

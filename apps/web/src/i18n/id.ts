@@ -27,6 +27,9 @@ export const id = {
     emailTerdaftar: 'Email sudah terdaftar. Silakan masuk.',
   },
   verifikasi: {
+    konfirmasiJudul: 'Verifikasi email',
+    konfirmasi: 'Tekan tombol di bawah untuk memverifikasi email dan memulai Masa Coba 14 hari.',
+    konfirmasiTombol: 'Verifikasi email saya',
     berhasilJudul: 'Email terverifikasi',
     berhasil: 'Usaha Anda sudah siap. Masa Coba 14 hari dimulai hari ini.',
     gagalJudul: 'Tautan tidak valid',

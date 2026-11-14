@@ -68,8 +68,6 @@ export interface PemilikTes extends PenggunaMasuk {
   outletId: string;
   /** Tambah Outlet di Tenant aktif; mengembalikan ID-nya. */
   tambahOutlet(data?: { nama?: string; kota?: string }): Promise<string>;
-  /** Dirikan Tenant lain untuk Pengguna yang sama (belum dipilih sebagai Tenant aktif). */
-  dirikanTenantLain(data?: { namaUsaha?: string; kota?: string }): Promise<string>;
   /** Buat Kategori di Merek default; mengembalikan ID-nya. */
   buatKategori(data?: { nama?: string; warna?: string; ikon?: string }): Promise<string>;
   /** Buat Menu di Merek default (tanpa `kategoriId` dibuatkan Kategori baru); mengembalikan ID-nya. */
@@ -231,12 +229,6 @@ export async function buatDuniaTes(opsi: OpsiDuniaTes = {}): Promise<DuniaTes> {
       outletId,
       async tambahOutlet(d = {}) {
         const res = await pengguna.post('/v1/outlet', { nama: d.nama ?? 'Outlet Kedua', kota: d.kota ?? 'Jakarta' }).expect(201);
-        return res.body.id as string;
-      },
-      async dirikanTenantLain(d = {}) {
-        const res = await pengguna
-          .post('/v1/tenant', { namaUsaha: d.namaUsaha ?? 'Usaha Kedua', kota: d.kota ?? 'Surabaya' })
-          .expect(201);
         return res.body.id as string;
       },
       buatKategori,
