@@ -659,6 +659,7 @@ function ModalTutupShift({ k, shift, galat }: { k: Kamus; shift: ShiftTerbuka; g
       <GalatShift k={k} tampil={galat} />
       <form action={tutupShift}>
         <input type="hidden" name="shiftId" value={shift.id} />
+        <input type="hidden" name="id" value={crypto.randomUUID()} />
         <label className="label">
           {k.shift.hitungButa}
           <input className="isian angka" name="hitungButa" inputMode="numeric" required autoFocus autoComplete="off" placeholder="0" />

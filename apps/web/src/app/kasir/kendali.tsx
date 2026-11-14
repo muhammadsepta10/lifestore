@@ -33,7 +33,8 @@ function ModalKendali({
   sub: string;
   emoji: string;
   atasan: Atasan[];
-  jalankan(persetujuan?: Persetujuan): Promise<HasilKendali>;
+  /** `id` = kunci idempoten perintah ini; sama untuk setiap percobaan ulang selama modal terbuka. */
+  jalankan(persetujuan: Persetujuan | undefined, id: string): Promise<HasilKendali>;
   siap?: boolean;
   labelLanjut?: string;
   tutup(): void;
@@ -45,11 +46,12 @@ function ModalKendali({
   const [perluPin, setPerluPin] = useState(false);
   const [anggotaId, setAnggotaId] = useState(atasan[0]?.id ?? '');
   const [pin, setPin] = useState('');
+  const [kunci] = useState(() => crypto.randomUUID());
 
   async function kirim() {
     setSibuk(true);
     setGalat(null);
-    const hasil = await jalankan(perluPin ? { anggotaId, pin } : undefined);
+    const hasil = await jalankan(perluPin ? { anggotaId, pin } : undefined, kunci);
     setSibuk(false);
     if (hasil.ok) {
       selesai();
@@ -232,7 +234,7 @@ export function KendaliTagihan({
           atasan={atasan}
           siap={alasan.trim() !== '' && angka > 0}
           labelLanjut={kd.pasang}
-          jalankan={(bukti) => pasangDiskon(tagihanId, jenis, angka, alasan.trim(), bukti)}
+          jalankan={(bukti, id) => pasangDiskon(tagihanId, id, jenis, angka, alasan.trim(), bukti)}
           tutup={tutup}
           selesai={() => selesai()}
         >
@@ -258,7 +260,7 @@ export function KendaliTagihan({
           atasan={atasan}
           siap={alasan.trim() !== ''}
           labelLanjut={kd.voidTagihan}
-          jalankan={(bukti) => voidTagihan(tagihanId, alasan.trim(), bukti)}
+          jalankan={(bukti, id) => voidTagihan(tagihanId, id, alasan.trim(), bukti)}
           tutup={tutup}
           selesai={() => selesai('/kasir')}
         >
@@ -296,7 +298,7 @@ export function TombolBukaLaci({ atasan }: { atasan: Atasan[] }) {
           emoji="🗄️"
           atasan={atasan}
           siap={alasan.trim() !== ''}
-          jalankan={(bukti) => bukaLaci(alasan.trim(), bukti)}
+          jalankan={(bukti, id) => bukaLaci(id, alasan.trim(), bukti)}
           tutup={() => setBuka(false)}
           selesai={() => {
             setBuka(false);

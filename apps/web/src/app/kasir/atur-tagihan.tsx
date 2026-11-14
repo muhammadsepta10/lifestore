@@ -31,6 +31,7 @@ export function AturTagihan({ k, tagihan, meja, galat }: { k: Kamus['kasir']; ta
         {dineIn ? (
           <form action={pindahMeja} className="kartu atur">
             <input type="hidden" name="tagihanId" value={tagihan.id} />
+            <input type="hidden" name="id" value={crypto.randomUUID()} />
             <label className="label">
               {a.pindahMeja}
               <select className="isian" name="mejaId" required defaultValue="">
@@ -52,6 +53,7 @@ export function AturTagihan({ k, tagihan, meja, galat }: { k: Kamus['kasir']; ta
         {dineIn ? (
           <form action={gabungMeja} className="kartu atur">
             <input type="hidden" name="tagihanId" value={tagihan.id} />
+            <input type="hidden" name="id" value={crypto.randomUUID()} />
             <label className="label">
               {a.gabungMeja}
               <select className="isian" name="mejaId" required defaultValue="">

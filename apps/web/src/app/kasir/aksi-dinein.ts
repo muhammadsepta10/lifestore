@@ -20,13 +20,13 @@ export async function bukaTagihanDineIn(form: FormData) {
   redirect(keTagihan(res.body.id));
 }
 
-/** Pindah Tagihan ke Meja lain yang Kosong. */
+/** Pindah Tagihan ke Meja lain yang Kosong. `id` dari formulir membuat kirim ulang aman. */
 export async function pindahMeja(form: FormData) {
   const tagihanId = teks(form, 'tagihanId');
   const res = await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/pindah-meja`, {
     method: 'POST',
     perangkat: true,
-    body: { mejaId: teks(form, 'mejaId') },
+    body: { id: teks(form, 'id') || undefined, mejaId: teks(form, 'mejaId') },
   });
   redirect(keTagihan(tagihanId, res.ok ? '' : '&galat=atur'));
 }
@@ -37,7 +37,7 @@ export async function gabungMeja(form: FormData) {
   const res = await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/gabung-meja`, {
     method: 'POST',
     perangkat: true,
-    body: { mejaId: teks(form, 'mejaId') },
+    body: { id: teks(form, 'id') || undefined, mejaId: teks(form, 'mejaId') },
   });
   redirect(keTagihan(tagihanId, res.ok ? '' : '&galat=atur'));
 }

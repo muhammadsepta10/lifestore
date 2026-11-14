@@ -86,7 +86,7 @@ export async function tutupShift(form: FormData) {
   const res = await panggilApi(`/v1/shift/${encodeURIComponent(shiftId)}/tutup`, {
     method: 'POST',
     perangkat: true,
-    body: { hitungButa: rupiah(form.get('hitungButa')) },
+    body: { id: teks(form, 'id') || undefined, hitungButa: rupiah(form.get('hitungButa')) },
   });
   if (!res.ok) redirect('/kasir?modal=tutup-shift&galat=shift');
   redirect(`/kasir?laporan=${encodeURIComponent(shiftId)}`);
