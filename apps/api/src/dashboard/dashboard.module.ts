@@ -10,6 +10,9 @@ import { adaStasiun } from '../menu/stasiun.controller';
 import { adaMejaAktif } from '../meja/meja.module';
 import { profilPajakBerlaku } from '../pajak/pajak.module';
 import { adaMetodeBayarAktif } from '../pembayaran/metode-bayar.module';
+import { tanggalOperasional } from '../penjualan/nomor';
+import { penjualanHarian } from '../penjualan/penjualan-dashboard.controller';
+import { Jam } from '../umum/jam';
 import { hariIni, tidakDitemukan, tidakValid } from '../umum/validasi';
 import { PerluIzin } from '../izin/izin';
 
@@ -78,9 +81,12 @@ function sisaHari(berakhir: Date, sekarang = new Date()): number {
 @Controller()
 @UseGuards(SesiGuard)
 export class DashboardController {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly jam: Jam,
+  ) {}
 
-  /** Dashboard: sisa Masa Coba dan checklist Siap Jualan per Outlet. */
+  /** Dashboard: sisa Masa Coba, checklist Siap Jualan, dan penjualan hari ini per Outlet (data langsung). */
   @Get('dashboard')
   @PerluIzin('dashboard.lihat')
   async dashboard() {
@@ -88,12 +94,27 @@ export class DashboardController {
     const [t] = await tx.select().from(tenant);
     const daftarOutlet = await tx.select().from(outlet).orderBy(asc(outlet.createdAt), asc(outlet.id));
     const hasilOutlet = [];
-    for (const o of daftarOutlet) hasilOutlet.push({ id: o.id, nama: o.nama, siapJualan: await hitungSiapJualan(tx, o) });
+    const tanggal = tanggalOperasional(this.jam.sekarang());
+    const penjualan = await penjualanHarian(
+      tx,
+      daftarOutlet.map((o) => o.id),
+      tanggal,
+    );
+    for (const o of daftarOutlet) {
+      hasilOutlet.push({ id: o.id, nama: o.nama, siapJualan: await hitungSiapJualan(tx, o), penjualanHariIni: penjualan.find((x) => x.outletId === o.id)! });
+    }
     return {
       tenant: { id: t!.id, nama: t!.nama },
       masaCoba: t!.masaCobaBerakhirPada
         ? { paketLangganan: 'Pro', berakhirPada: t!.masaCobaBerakhirPada, sisaHari: sisaHari(t!.masaCobaBerakhirPada) }
         : null,
+      /** Jumlah semua Outlet. */
+      penjualanHariIni: {
+        tanggal,
+        penjualan: penjualan.reduce((s, x) => s + x.penjualan, 0),
+        jumlahTagihan: penjualan.reduce((s, x) => s + x.jumlahTagihan, 0),
+        pembulatanTunai: penjualan.reduce((s, x) => s + x.pembulatanTunai, 0),
+      },
       outlet: hasilOutlet,
     };
   }

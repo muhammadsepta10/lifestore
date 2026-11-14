@@ -163,6 +163,42 @@ describe('Dine-in dengan Meja', () => {
     expect(bayar.tagihan).toMatchObject({ status: 'lunas', nomorNota: 1 });
     expect(((await kasir.get('/v1/kasir/meja').expect(200)).body as MejaKasir[]).map((m) => m.status)).toEqual(['kosong', 'kosong', 'kosong']);
   });
+
+  it('Meja dan Tagihan Tenant atau Outlet lain tidak bisa dipakai, dipindah, digabung, atau dipisah', async () => {
+    const a = await dunia.daftarTenant();
+    const b = await dunia.daftarTenant();
+    const [mejaA] = await a.buatMeja(1, 1);
+    const [mejaB1, mejaB2] = await b.buatMeja(1, 2);
+    const outletKeduaA = await a.tambahOutlet();
+    const [mejaLainOutlet] = await a.buatMeja(1, 1, outletKeduaA);
+    const menuB = await b.buatMenu({ nama: 'Soto', harga: 10_000 });
+    const kasirA = await a.bukaKasir();
+    const kasirB = await b.bukaKasir();
+    const tagihanB = await kasirB.bukaTagihanDineIn(mejaB1!);
+    const pesananB = (await kasirB.kirimPesanan(tagihanB, [{ menuId: menuB }, { menuId: menuB }]).expect(201)).body;
+    const sebelum = (await kasirB.get(`/v1/tagihan/${tagihanB}`).expect(200)).body;
+
+    const tagihanA = await kasirA.bukaTagihanDineIn(mejaA!);
+    for (const coba of [
+      () => kasirA.post('/v1/tagihan', { kanal: 'dine_in', mejaId: mejaB2 }),
+      () => kasirA.post('/v1/tagihan', { kanal: 'dine_in', mejaId: mejaLainOutlet }),
+      () => kasirA.post(`/v1/tagihan/${tagihanA}/pindah-meja`, { mejaId: mejaB2 }),
+      () => kasirA.post(`/v1/tagihan/${tagihanA}/gabung-meja`, { mejaId: mejaB1 }),
+      () => kasirA.post(`/v1/tagihan/${tagihanA}/gabung-meja`, { mejaId: mejaLainOutlet }),
+      () => kasirA.post(`/v1/tagihan/${tagihanB}/pindah-meja`, { mejaId: mejaA }),
+      () => kasirA.post(`/v1/tagihan/${tagihanB}/gabung-meja`, { mejaId: mejaA }),
+      () => kasirA.post(`/v1/tagihan/${tagihanB}/pisah`, { itemIds: [pesananB.item[0].id] }),
+    ]) {
+      expect((await coba()).status).toBe(404);
+    }
+    // Item Pesanan Tenant lain tidak bisa ditarik ke Tagihan sendiri lewat Pisah Tagihan.
+    await kasirA.post(`/v1/tagihan/${tagihanA}/pisah`, { itemIds: [pesananB.item[0].id] }).expect(400);
+    expect((await kasirB.get(`/v1/tagihan/${tagihanB}`).expect(200)).body).toEqual(sebelum);
+    expect(((await kasirB.get('/v1/kasir/meja').expect(200)).body as MejaKasir[]).map((m) => [m.status, m.tagihanId])).toEqual([
+      ['terisi', tagihanB],
+      ['kosong', null],
+    ]);
+  });
 });
 
 describe('Profil Pajak bertanggal pada Tagihan', () => {
