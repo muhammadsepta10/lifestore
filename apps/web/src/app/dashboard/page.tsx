@@ -13,12 +13,24 @@ interface LangkahSiapJualan {
   wajibUntukKasir: boolean;
 }
 
+interface PenjualanHariIni {
+  tanggal: string;
+  penjualan: number;
+  jumlahTagihan: number;
+  pembulatanTunai: number;
+  perMetodeBayar?: { jenis: string; jumlah: number; nilai: number }[];
+}
+
+const rp = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
+
 interface Dashboard {
   tenant: { id: string; nama: string };
+  penjualanHariIni: PenjualanHariIni;
   masaCoba: { paketLangganan: string; berakhirPada: string; sisaHari: number } | null;
   outlet: {
     id: string;
     nama: string;
+    penjualanHariIni: PenjualanHariIni;
     siapJualan: { selesai: number; total: number; langkah: LangkahSiapJualan[]; kasir: { siap: boolean } };
   }[];
 }
@@ -80,6 +92,60 @@ export default async function HalamanDashboard() {
           </button>
         </form>
       </header>
+
+      <section style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: 24 }} data-hari-ini>
+        <h2 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>
+          {k.hariIni.judul}
+          {d.outlet.length > 1 ? ` · ${k.hariIni.semuaOutlet}` : ''}
+        </h2>
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div>
+            <small style={{ color: 'var(--muted)' }}>{k.hariIni.penjualan}</small>
+            <div style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }} data-penjualan={d.penjualanHariIni.penjualan}>
+              {rp(d.penjualanHariIni.penjualan)}
+            </div>
+          </div>
+          <div>
+            <small style={{ color: 'var(--muted)' }}>{k.hariIni.jumlahTagihan}</small>
+            <div style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }} data-jumlah-tagihan={d.penjualanHariIni.jumlahTagihan}>
+              {d.penjualanHariIni.jumlahTagihan}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+          {d.outlet.map((o) => (
+            <div key={o.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }} data-outlet-hari-ini={o.id}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <b style={{ flex: 1 }}>{o.nama}</b>
+                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>{rp(o.penjualanHariIni.penjualan)}</span>
+                <small style={{ color: 'var(--muted)' }}>
+                  {o.penjualanHariIni.jumlahTagihan} {k.hariIni.jumlahTagihan.toLowerCase()}
+                </small>
+                <Link href={`/penjualan?outlet=${o.id}`} style={gayaTombolSekunder}>
+                  {k.hariIni.lihatTagihan}
+                </Link>
+              </div>
+              {o.penjualanHariIni.jumlahTagihan === 0 ? (
+                <small style={{ color: 'var(--muted)' }}>{k.hariIni.belumAda}</small>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', gap: 8, flexWrap: 'wrap' }} aria-label={k.hariIni.perMetode}>
+                  {(o.penjualanHariIni.perMetodeBayar ?? []).map((m) => (
+                    <li key={m.jenis} style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 14 }} data-metode={m.jenis}>
+                      {t().kasir.namaMetodeBayar[m.jenis] ?? m.jenis} <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(m.nilai)}</b>{' '}
+                      <small style={{ color: 'var(--muted)' }}>{k.hariIni.kaliBayar(m.jumlah)}</small>
+                    </li>
+                  ))}
+                  {o.penjualanHariIni.pembulatanTunai !== 0 ? (
+                    <li style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 14 }}>
+                      {k.hariIni.pembulatan} <b style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(o.penjualanHariIni.pembulatanTunai)}</b>
+                    </li>
+                  ) : null}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
 
       {d.outlet.map((o) => (
         <section

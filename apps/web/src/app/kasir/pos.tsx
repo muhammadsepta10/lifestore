@@ -1,11 +1,12 @@
 'use client';
 
-import { hitungTagihan } from '@lifestore/domain';
+import { type AturanPembulatanTunai, hitungTagihan } from '@lifestore/domain';
 import { PASTEL_KATEGORI, type PastelKategori } from '@lifestore/ui';
 import { useRouter } from 'next/navigation';
 import { createContext, type CSSProperties, type ReactNode, useContext, useMemo, useState } from 'react';
 import { t } from '../../i18n/id';
-import { bayarTunai, type ItemKiriman, kirimPesanan } from './aksi';
+import { type ItemKiriman, kirimPesanan } from './aksi';
+import { type MetodeBayarAktif, ModalBayar } from './bayar';
 import type { KategoriJual, MenuJual, TagihanLengkap } from './tipe';
 
 /**
@@ -251,7 +252,17 @@ function rincianBaris(b: { namaVarian?: string | null; pilihan: { nama: string }
 }
 
 /** Panel kanan: Pesanan terkirim, keranjang, rincian langsung, Kirim Pesanan, dan Bayar tunai. */
-export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tunaiAktif: boolean }) {
+export function PanelPesanan({
+  adaShift,
+  metodeBayar,
+  pembulatanTunai,
+  bayarDulu,
+}: {
+  adaShift: boolean;
+  metodeBayar: MetodeBayarAktif[];
+  pembulatanTunai: AturanPembulatanTunai | null;
+  bayarDulu: boolean;
+}) {
   const pos = usePos();
   const router = useRouter();
   const { tagihan, keranjang } = pos;
@@ -259,6 +270,7 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
   const [sibuk, setSibuk] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [bayar, setBayar] = useState(false);
+  const [tunaiDiKasir, setTunaiDiKasir] = useState(false);
 
   const terkirim = useMemo(() => tagihan?.pesanan.flatMap((x) => x.item) ?? [], [tagihan]);
   const rincian = useMemo(
@@ -306,7 +318,7 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
       jumlah: b.jumlah,
       catatan: b.catatan || undefined,
     }));
-    const hasil = await kirimPesanan(tagihan.id, kunciPesanan, item);
+    const hasil = await kirimPesanan(tagihan.id, kunciPesanan, item, tunaiDiKasir);
     setSibuk(false);
     if (!hasil.ok) {
       setGalat(p.galat[hasil.kode] ?? p.galat.gagal!);
@@ -322,7 +334,8 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
 
   const adaKeranjang = keranjang.length > 0;
   const adaTerkirim = terkirim.some((i) => i.status !== 'batal');
-  const halangan = adaKeranjang || !adaTerkirim ? p.kirimDulu : !tunaiAktif ? p.tunaiNonaktif : !adaShift ? p.perluShift : null;
+  const halangan = adaKeranjang || !adaTerkirim ? p.kirimDulu : metodeBayar.length === 0 ? k.bayarLengkap.belumAdaMetode : metodeBayar.every((m) => m.jenis === 'tunai') && !adaShift ? p.perluShift : null;
+  const ditahanDulu = bayarDulu && tagihan.kanal === 'bawa_pulang';
   const labelPajak = tagihan.profilPajak.hargaTermasukPajak ? p.pajakTermasuk(tagihan.profilPajak.labelStruk) : tagihan.profilPajak.labelStruk;
 
   return (
@@ -332,7 +345,10 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
           <h3>{tagihan.namaPelanggan ?? p.tanpaNama}</h3>
           <small>{tagihan.pesanan.length > 0 ? tagihan.pesanan.map((x) => x.nomorPesanan).join(' · ') : p.belumAdaPesanan}</small>
         </div>
-        <span className="pil info">{k.jenis[tagihan.kanal]}</span>
+        <span className="pil info">
+          {k.jenis[tagihan.kanal]}
+          {tagihan.meja.length > 0 ? ` · ${k.dineIn.meja(tagihan.meja.map((m) => m.label).join(' + '))}` : ''}
+        </span>
       </div>
 
       <div className="olines">
@@ -407,86 +423,39 @@ export function PanelPesanan({ adaShift, tunaiAktif }: { adaShift: boolean; tuna
           {galat}
         </p>
       ) : null}
+      {tagihan.dibayar > 0 ? (
+        <div className="osum" data-dibayar={tagihan.dibayar}>
+          <span>{k.bayarLengkap.sudahDibayar}</span>
+          <span>{rp(tagihan.dibayar)}</span>
+          <span>{k.bayarLengkap.sisaLabel}</span>
+          <span data-sisa>{rp(Math.max(rincian.total - tagihan.dibayar, 0))}</span>
+        </div>
+      ) : null}
+      {ditahanDulu ? (
+        <label className="centang" title={k.dineIn.ditahanInfo}>
+          <input type="checkbox" checked={tunaiDiKasir} onChange={(e) => setTunaiDiKasir(e.target.checked)} />
+          <span>
+            {k.dineIn.tunaiDiKasir}
+            <small className="muted"> {k.dineIn.ditahanInfo}</small>
+          </span>
+        </label>
+      ) : null}
       {adaKeranjang ? (
         <button className="tombol tinta besar lebar" type="button" onClick={kirim} disabled={sibuk}>
           {sibuk ? p.mengirim : p.kirimPesanan}
         </button>
       ) : null}
       <button className="tombol besar lebar" type="button" disabled={halangan !== null} onClick={() => setBayar(true)} title={halangan ?? undefined}>
-        {p.bayarTunai(rp(rincian.total))}
+        {k.bayarLengkap.tombol(rp(Math.max(rincian.total - tagihan.dibayar, 0)))}
       </button>
       {halangan && adaTerkirim && !adaKeranjang ? (
         <p className="muted" style={{ fontSize: 13 }} role="status">
           {halangan}
         </p>
       ) : null}
-      {bayar ? <ModalBayar tagihanId={tagihan.id} total={tagihan.sisa} tutup={() => setBayar(false)} /> : null}
+      {bayar ? (
+        <ModalBayar tagihanId={tagihan.id} sisa={tagihan.sisa} metode={metodeBayar} adaShift={adaShift} pembulatanTunai={pembulatanTunai} tutup={() => setBayar(false)} />
+      ) : null}
     </aside>
-  );
-}
-
-/** Bayar tunai: ketik uang diterima, kembalian langsung terlihat. Kunci idempoten dipakai ulang saat mencoba lagi. */
-function ModalBayar({ tagihanId, total, tutup }: { tagihanId: string; total: number; tutup(): void }) {
-  const router = useRouter();
-  const [kunci] = useState(() => crypto.randomUUID());
-  const [teks, setTeks] = useState('');
-  const [sibuk, setSibuk] = useState(false);
-  const [galat, setGalat] = useState<string | null>(null);
-  const diterima = Number(teks.replace(/\D/g, '') || 0);
-  const selisih = diterima - total;
-  const cepat = [...new Set([total, ...[10_000, 20_000, 50_000, 100_000].map((n) => Math.ceil(total / n) * n)])].slice(0, 4);
-
-  async function terima() {
-    setSibuk(true);
-    setGalat(null);
-    const hasil = await bayarTunai(tagihanId, kunci, diterima);
-    if (hasil.ok) {
-      router.push(`/kasir?struk=${encodeURIComponent(tagihanId)}`);
-      return;
-    }
-    setSibuk(false);
-    setGalat(p.galat[hasil.kode] ?? p.galat.gagal!);
-  }
-
-  return (
-    <div className="scrim">
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="judul-bayar">
-        <div className="mh">
-          <span className="thumb">💵</span>
-          <div>
-            <h2 id="judul-bayar">{p.bayarJudul}</h2>
-            <p className="muted">{p.bayarSub(rp(total))}</p>
-          </div>
-        </div>
-        {galat ? (
-          <p className="pesan galat" role="alert">
-            {galat}
-          </p>
-        ) : null}
-        <label className="label">
-          {p.diterima}
-          <input className="isian angka" name="diterima" inputMode="numeric" autoFocus autoComplete="off" value={teks} onChange={(e) => setTeks(e.target.value)} />
-        </label>
-        <div className="cepat">
-          {cepat.map((n, i) => (
-            <button key={n} type="button" className="tombol tenang" onClick={() => setTeks(String(n))}>
-              {i === 0 ? p.uangPas : rp(n)}
-            </button>
-          ))}
-        </div>
-        <div className="ototal" data-kembalian={selisih}>
-          <span>{selisih < 0 ? p.kurang : p.kembalian}</span>
-          <b className={selisih < 0 ? 'selisih-kurang' : undefined}>{rp(Math.abs(selisih))}</b>
-        </div>
-        <div className="baris">
-          <button type="button" className="tombol tenang" onClick={tutup} disabled={sibuk}>
-            {p.batal}
-          </button>
-          <button type="button" className="tombol" onClick={terima} disabled={sibuk || selisih < 0}>
-            {sibuk ? p.memproses : p.terimaPembayaran}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -1,15 +1,17 @@
 import { PASTEL_KATEGORI, type PastelKategori } from '@lifestore/ui';
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, Fragment, type ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { t } from '../../i18n/id';
 import { COOKIE_PERANGKAT, panggilApi } from '../../lib/api';
+import { bukaTagihanDineIn } from './aksi-dinein';
+import { AturTagihan } from './atur-tagihan';
 import { bukaShift, bukaTagihan, catatKas, daftarPerangkat, keluarKasir, lupakanPerangkat, masukPin, tutupShift, ubahMeja } from './aksi';
 import { Ikon, type NamaIkon } from './ikon';
 import { TombolCetak, TombolTema } from './klien';
 import { GridMenu, PanelPesanan, PenyediaPos } from './pos';
-import type { DaftarJual, TagihanLengkap, TagihanTerbuka } from './tipe';
+import type { DaftarJual, MejaKasir, TagihanLengkap, TagihanTerbuka } from './tipe';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,20 +34,14 @@ interface ShiftTerbuka {
 
 interface LayarKasir {
   perangkat: { id: string; nama: string; awalan: string };
-  outlet: { id: string; nama: string };
+  outlet: { id: string; nama: string; pembulatanTunai: { kelipatan: number; arah: 'bawah' | 'terdekat' | 'atas' } | null; bayarDulu: boolean };
   anggota: { id: string; nama: string; peran: string };
   izin: string[];
   shift: ShiftTerbuka | null;
   metodeBayar: { jenis: string; nama: string; keterangan: string | null }[];
 }
 
-interface Meja {
-  id: string;
-  label: string;
-  kapasitas: number;
-  aktif: boolean;
-  status: string;
-}
+type Meja = MejaKasir;
 
 interface LaporanShift {
   id: string;
@@ -56,6 +52,7 @@ interface LaporanShift {
   kasAwal: number;
   penjualanTunai: number;
   penjualanPerMetodeBayar: { jenis: string; nilai: number }[];
+  pembulatanTunai?: number;
   kasMasuk: number;
   kasKeluar: number;
   kasSeharusnya: number;
@@ -395,6 +392,11 @@ function LayarKasirB({
                 {k.shift.sudahTerbuka}
               </p>
             ) : null}
+            {cari.galat === 'meja_terisi' ? (
+              <p className="pesan galat" role="alert">
+                {k.dineIn.mejaTerisi}
+              </p>
+            ) : null}
             {cari.galat === 'tagihan' ? (
               <p className="pesan galat" role="alert">
                 {k.pos.tagihanGagal}
@@ -424,7 +426,7 @@ function LayarKasirB({
                 {terbuka.map((x) => (
                   <Link key={x.id} className="ocard" href={ke({ tagihan: x.id })} aria-current={tagihan?.id === x.id ? 'true' : undefined} data-tagihan={x.id}>
                     <span className="ocard-h">
-                      <b>{x.namaPelanggan ?? k.pos.tanpaNama}</b>
+                      <b>{x.meja.length > 0 ? k.dineIn.meja(x.meja.map((m) => m.label).join(' + ')) : (x.namaPelanggan ?? k.pos.tanpaNama)}</b>
                       <span className="pil info">{k.jenis[x.kanal]}</span>
                     </span>
                     <small>{x.nomorPesanan.length > 0 ? x.nomorPesanan.join(' · ') : k.pos.belumAdaPesanan}</small>
@@ -493,7 +495,22 @@ function LayarKasirB({
                       <span className={`pil ${!m.aktif ? 'redup' : m.status === 'terisi' ? 'info' : 'ok'}`}>
                         {m.aktif ? k.statusMeja[m.status] ?? m.status : k.statusMeja.nonaktif}
                       </span>
-                      {bolehNonaktifkanMeja ? (
+                      {m.aktif && m.status === 'kosong' ? (
+                        <form action={bukaTagihanDineIn}>
+                          {/* ID buatan klien: kirim ulang formulir yang sama tidak membuka Tagihan kedua. */}
+                          <input type="hidden" name="id" value={crypto.randomUUID()} />
+                          <input type="hidden" name="mejaId" value={m.id} />
+                          <button className="tombol" type="submit" data-buka-meja={m.label}>
+                            {k.dineIn.bukaTagihan}
+                          </button>
+                        </form>
+                      ) : null}
+                      {m.aktif && m.tagihanId ? (
+                        <Link className="tombol tenang kecil" href={ke({ tagihan: m.tagihanId })}>
+                          {k.dineIn.lihatTagihan}
+                        </Link>
+                      ) : null}
+                      {bolehNonaktifkanMeja && m.status === 'kosong' ? (
                         <form action={ubahMeja}>
                           <input type="hidden" name="mejaId" value={m.id} />
                           <input type="hidden" name="aktif" value={m.aktif ? '0' : '1'} />
@@ -507,9 +524,11 @@ function LayarKasirB({
                 </div>
               )}
             </section>
+
+            {tagihan && tagihan.status === 'terbuka' ? <AturTagihan k={k} tagihan={tagihan} meja={meja} galat={cari.galat === 'atur'} /> : null}
           </div>
 
-          <PanelPesanan adaShift={d.shift !== null} tunaiAktif={d.metodeBayar.some((m) => m.jenis === 'tunai')} />
+          <PanelPesanan adaShift={d.shift !== null} metodeBayar={d.metodeBayar} pembulatanTunai={d.outlet.pembulatanTunai ?? null} bayarDulu={d.outlet.bayarDulu ?? false} />
         </div>
         </PenyediaPos>
       </div>
@@ -664,6 +683,12 @@ function ModalLaporan({ k, l }: { k: Kamus; l: LaporanShift }) {
             ? k.laporan.belumAdaPenjualan
             : l.penjualanPerMetodeBayar.map((p) => `${k.namaMetodeBayar[p.jenis] ?? p.jenis} ${rp(p.nilai)}`).join(' · ')}
         </span>
+        {l.pembulatanTunai ? (
+          <>
+            <span className="muted">{k.pos.struk.pembulatan}</span>
+            <span>{rp(l.pembulatanTunai)}</span>
+          </>
+        ) : null}
         <span className="muted">{k.laporan.void}</span>
         <span>
           {l.void.jumlah} · {rp(l.void.nilai)}
@@ -701,7 +726,7 @@ function ModalLaporan({ k, l }: { k: Kamus; l: LaporanShift }) {
 function ModalStruk({ k, outlet, s }: { k: Kamus; outlet: string; s: TagihanLengkap }) {
   const p = k.pos;
   const item = s.pesanan.flatMap((x) => x.item).filter((i) => i.status !== 'batal');
-  const tunai = s.pembayaran.reduce((n, b) => n + b.diterima, 0);
+  const pembulatan = s.pembayaran.reduce((n, b) => n + b.pembulatan, 0);
   const kembalian = s.pembayaran.reduce((n, b) => n + b.kembalian, 0);
   const labelPajak = s.profilPajak.hargaTermasukPajak ? p.pajakTermasuk(s.profilPajak.labelStruk) : s.profilPajak.labelStruk;
   return (
@@ -745,8 +770,24 @@ function ModalStruk({ k, outlet, s }: { k: Kamus; outlet: string; s: TagihanLeng
           <span className="grand" data-total>
             {rp(s.rincian.total)}
           </span>
-          <span className="muted">{p.struk.tunai}</span>
-          <span>{rp(tunai)}</span>
+          {pembulatan !== 0 ? (
+            <>
+              <span className="muted">{p.struk.pembulatan}</span>
+              <span data-pembulatan>
+                {pembulatan > 0 ? '+' : '−'}
+                {rp(Math.abs(pembulatan))}
+              </span>
+            </>
+          ) : null}
+          {s.pembayaran.map((b) => (
+            <Fragment key={b.id}>
+              <span className="muted">
+                {k.namaMetodeBayar[b.metode] ?? b.metode}
+                {b.referensi ? ` · ${b.referensi}` : ''}
+              </span>
+              <span data-bayar={b.metode}>{rp(b.diterima)}</span>
+            </Fragment>
+          ))}
           <span className="muted">{p.struk.kembalian}</span>
           <span data-kembalian>{rp(kembalian)}</span>
         </div>

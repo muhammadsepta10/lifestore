@@ -147,6 +147,8 @@ describe('Cara bayar lengkap', () => {
     const mie = await pemilik.buatMenu({ nama: 'Mie', harga: 7_140 }); // + 10% = 7.854
     const kasir = await pemilik.bukaKasir();
     const shiftId = await kasir.bukaShift(0);
+    // Layar kasir tahu aturannya, untuk menampilkan jumlah tunai yang harus dibayar.
+    expect((await kasir.get('/v1/kasir').expect(200)).body.outlet).toMatchObject({ pembulatanTunai: { kelipatan: 100, arah: 'terdekat' }, bayarDulu: false });
 
     // Tunai: 7.854 dibulatkan ke 7.900; selisih +46 dicatat sebagai Pembulatan Tunai.
     const tunaiId = await kasir.bukaTagihan();

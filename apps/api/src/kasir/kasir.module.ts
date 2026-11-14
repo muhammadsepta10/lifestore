@@ -23,7 +23,7 @@ export class KasirController {
   @PerluIzin('kasir.buka')
   async kasir(@Perangkat() p: PerangkatAktif, @PelakuAktif() pelaku: Pelaku) {
     const tx = this.db.tenant();
-    const [o] = await tx.select({ id: outlet.id, nama: outlet.nama }).from(outlet).where(eq(outlet.id, p.outletId));
+    const [o] = await tx.select().from(outlet).where(eq(outlet.id, p.outletId));
     const [a] = await tx
       .select({ nama: anggota.nama, email: pengguna.email })
       .from(anggota)
@@ -31,7 +31,15 @@ export class KasirController {
       .where(eq(anggota.id, pelaku.anggotaId));
     return {
       perangkat: { id: p.id, nama: p.nama, awalan: p.awalan },
-      outlet: o,
+      /** Termasuk aturan Pembulatan Tunai dan bayar-dulu, supaya kasir menampilkan jumlah tunai yang benar. */
+      outlet: o
+        ? {
+            id: o.id,
+            nama: o.nama,
+            pembulatanTunai: o.pembulatanTunaiKelipatan && o.pembulatanTunaiArah ? { kelipatan: o.pembulatanTunaiKelipatan, arah: o.pembulatanTunaiArah } : null,
+            bayarDulu: o.bayarDulu,
+          }
+        : undefined,
       anggota: { id: pelaku.anggotaId, nama: a?.nama ?? a?.email ?? '', peran: pelaku.peran },
       izin: daftarIzin(pelaku, p.outletId),
       shift: await shiftTerbuka(tx, p.id),

@@ -132,9 +132,9 @@ function hasil(res: { ok: boolean; body: unknown }): HasilPerintah {
  * Kirim keranjang sebagai satu Pesanan. `id` dibuat di perangkat dan dipakai lagi saat mencoba
  * ulang, sehingga Pesanan tidak pernah tergandakan. Harga tidak dikirim: API menyalinnya dari Menu.
  */
-export async function kirimPesanan(tagihanId: string, id: string, item: ItemKiriman[]): Promise<HasilPerintah> {
+export async function kirimPesanan(tagihanId: string, id: string, item: ItemKiriman[], tunaiDiKasir = false): Promise<HasilPerintah> {
   try {
-    return hasil(await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/pesanan`, { method: 'POST', perangkat: true, body: { id, item } }));
+    return hasil(await panggilApi(`/v1/tagihan/${encodeURIComponent(tagihanId)}/pesanan`, { method: 'POST', perangkat: true, body: { id, item, ...(tunaiDiKasir ? { tunaiDiKasir: true } : {}) } }));
   } catch {
     return { ok: false, kode: 'gagal' };
   }

@@ -1016,3 +1016,42 @@ button.mcard:not(:disabled):active {
     max-height: none;
   }
 }
+
+/* Dine-in: buka Tagihan di Meja, atur Tagihan (pindah/gabung Meja, Pisah Tagihan) */
+.meja .tombol {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  width: 100%;
+}
+.atur-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.atur {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.pisah-item {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.centang {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  min-height: 32px;
+}
+.centang input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}

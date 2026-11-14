@@ -46,8 +46,10 @@ export interface Rincian {
 
 export interface RingkasTagihan {
   id: string;
-  status: 'terbuka' | 'lunas' | 'void';
+  status: 'terbuka' | 'lunas' | 'void' | 'digabung';
   kanal: 'dine_in' | 'bawa_pulang';
+  /** Meja yang ditempati (dine-in); lebih dari satu setelah gabung Meja. */
+  meja: { id: string; label: string }[];
   namaPelanggan: string | null;
   nomorNota: number | null;
   dibukaPada: string;
@@ -58,6 +60,8 @@ export interface RingkasTagihan {
   total: number;
   dibayar: number;
   sisa: number;
+  /** Pembulatan Tunai, dicatat terpisah dari total. */
+  pembulatanTunai: number;
 }
 
 /** Baris di daftar Tagihan terbuka. */
@@ -68,5 +72,15 @@ export interface TagihanTerbuka extends RingkasTagihan {
 
 export interface TagihanLengkap extends RingkasTagihan {
   pesanan: { id: string; nomorPesanan: string; dikirimPada: string; item: ItemPesanan[] }[];
-  pembayaran: { id: string; metode: string; jumlah: number; diterima: number; kembalian: number }[];
+  pembayaran: { id: string; metode: string; jumlah: number; diterima: number; kembalian: number; pembulatan: number; referensi: string | null }[];
+}
+
+export interface MejaKasir {
+  id: string;
+  label: string;
+  kapasitas: number;
+  aktif: boolean;
+  status: string;
+  /** Tagihan terbuka yang menempati Meja ini. */
+  tagihanId: string | null;
 }

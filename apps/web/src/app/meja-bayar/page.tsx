@@ -53,14 +53,37 @@ async function aturMetodeBayar(form: FormData) {
   redirect(`/meja-bayar?outlet=${encodeURIComponent(outletId)}${res.ok ? '' : '&galat=metode'}`);
 }
 
-/** Meja dan Metode Bayar per Outlet (langkah Siap Jualan). */
+interface PengaturanOutlet {
+  pembulatanTunai: { kelipatan: number; arah: string } | null;
+  bayarDulu: boolean;
+}
+
+const KELIPATAN = [100, 500, 1000] as const;
+const ARAH = ['terdekat', 'bawah', 'atas'] as const;
+
+async function aturPembayaranOutlet(form: FormData) {
+  'use server';
+  const outletId = String(form.get('outletId') ?? '');
+  const kelipatan = Number(form.get('kelipatan') ?? 0);
+  const res = await panggilApi(`/v1/outlet/${encodeURIComponent(outletId)}`, {
+    method: 'PATCH',
+    body: {
+      pembulatanTunai: kelipatan > 0 ? { kelipatan, arah: String(form.get('arah') ?? 'terdekat') } : null,
+      bayarDulu: form.get('bayarDulu') === 'on',
+    },
+  });
+  redirect(`/meja-bayar?outlet=${encodeURIComponent(outletId)}${res.ok ? '' : '&galat=pengaturan'}`);
+}
+
+/** Meja, Metode Bayar, Pembulatan Tunai, dan bayar-dulu per Outlet. */
 export default async function HalamanMejaBayar({ searchParams }: { searchParams: Promise<{ outlet?: string; galat?: string }> }) {
   const k = t().mejaBayar;
   const { outlet, galat } = await searchParams;
   if (!outlet) redirect('/dashboard');
-  const [meja, metode] = await Promise.all([
+  const [meja, metode, pengaturan] = await Promise.all([
     panggilApi<Meja[]>(`/v1/outlet/${encodeURIComponent(outlet)}/meja`),
     panggilApi<MetodeBayar[]>(`/v1/outlet/${encodeURIComponent(outlet)}/metode-bayar`),
+    panggilApi<PengaturanOutlet>(`/v1/outlet/${encodeURIComponent(outlet)}`),
   ]);
   if (meja.status === 401) redirect('/masuk');
 
@@ -72,7 +95,7 @@ export default async function HalamanMejaBayar({ searchParams }: { searchParams:
           {k.kembali}
         </Link>
       </header>
-      {galat ? <Pesan jenis="galat">{galat === 'meja' ? k.galatMeja : k.galatMetode}</Pesan> : null}
+      {galat ? <Pesan jenis="galat">{galat === 'meja' ? k.galatMeja : galat === 'pengaturan' ? k.galatPengaturan : k.galatMetode}</Pesan> : null}
 
       {metode.ok ? (
         <section style={kartu}>
@@ -101,6 +124,42 @@ export default async function HalamanMejaBayar({ searchParams }: { searchParams:
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {pengaturan.ok ? (
+        <section style={kartu} data-pengaturan-bayar>
+          <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800 }}>{k.pengaturanBayar}</h2>
+          <p style={{ color: 'var(--muted)', margin: '0 0 12px' }}>{k.pengaturanBayarSub}</p>
+          <form action={aturPembayaranOutlet} style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
+            <input type="hidden" name="outletId" value={outlet} />
+            <Kolom label={k.kelipatan}>
+              <select name="kelipatan" defaultValue={String(pengaturan.body.pembulatanTunai?.kelipatan ?? 0)} style={{ ...gayaInput, width: 180 }}>
+                <option value="0">{k.tanpaPembulatan}</option>
+                {[...new Set([...KELIPATAN, ...(pengaturan.body.pembulatanTunai ? [pengaturan.body.pembulatanTunai.kelipatan] : [])])].map((n) => (
+                  <option key={n} value={n}>
+                    Rp{new Intl.NumberFormat('id-ID').format(n)}
+                  </option>
+                ))}
+              </select>
+            </Kolom>
+            <Kolom label={k.arah}>
+              <select name="arah" defaultValue={pengaturan.body.pembulatanTunai?.arah ?? 'terdekat'} style={{ ...gayaInput, width: 150 }}>
+                {ARAH.map((a) => (
+                  <option key={a} value={a}>
+                    {k.arahPilihan[a]}
+                  </option>
+                ))}
+              </select>
+            </Kolom>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44, marginBottom: 12 }}>
+              <input type="checkbox" name="bayarDulu" defaultChecked={pengaturan.body.bayarDulu} style={{ width: 18, height: 18 }} />
+              {k.bayarDulu}
+            </label>
+            <button type="submit" style={{ ...gayaTombol, marginBottom: 12 }}>
+              {k.simpan}
+            </button>
+          </form>
         </section>
       ) : null}
 
