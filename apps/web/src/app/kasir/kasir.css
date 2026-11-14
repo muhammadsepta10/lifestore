@@ -1054,6 +1054,8 @@ button.mcard:not(:disabled):active {
   height: 18px;
   margin-top: 2px;
   accent-color: var(--accent);
+}
+
 /* ---------- Kendali kasir (#39): batal item, diskon, void, Persetujuan Atasan ---------- */
 .oline {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
