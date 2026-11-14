@@ -310,6 +310,83 @@ describe('Isolasi Tenant lewat API', () => {
     expect(await tagihanB()).toEqual(sebelum);
   });
 
+  it('Perangkat Terdaftar Tenant A tidak melihat atau mengendalikan dapur, pembatalan, void, Diskon Manual, dan Meja Tagihan Tenant B', async () => {
+    const sebagai = (p: PerangkatTes, metode: 'put' | 'delete', path: string, body?: object) =>
+      dunia.http[metode](path).set('Authorization', `Perangkat ${p.token}`).send(body ?? {});
+    // Tenant B: Tagihan dine-in berisi satu item ber-Stasiun, dan layar dapur.
+    const [meja1B, meja2B] = ((await b.get(`/v1/outlet/${b.outletId}/meja`).expect(200)).body as { id: string }[]).map((m) => m.id);
+    const dimasakB = await b.buatMenu({ nama: 'Rawon Warung B', harga: 10_000 });
+    await b.put(`/v1/outlet/${b.outletId}/menu/${dimasakB}/stasiun`, { stasiunId: stasiunB }).expect(200);
+    await tabletB.masukPin(karyawanB, '1234').expect(200);
+    const dineInB = (await tabletB.post('/v1/tagihan', { kanal: 'dine_in', mejaId: meja1B, namaPelanggan: 'Rombongan Warung B' }).expect(201)).body.id;
+    const pesananB = (await tabletB.post(`/v1/tagihan/${dineInB}/pesanan`, { item: [{ menuId: dimasakB }, { menuId: dimasakB }] }).expect(201)).body;
+    const [itemB, itemB2] = pesananB.item.map((i: { id: string }) => i.id) as string[];
+    const dapurB = await b.bukaKasir({ peran: 'dapur' });
+    const keadaanB = async () => ({
+      tagihan: (await tabletB.get(`/v1/tagihan/${dineInB}`).expect(200)).body,
+      terbuka: (await tabletB.get('/v1/tagihan').expect(200)).body,
+      meja: (await tabletB.get('/v1/kasir/meja').expect(200)).body,
+      dapur: (await dapurB.get('/v1/kds').expect(200)).body.item,
+    });
+    const sebelum = await keadaanB();
+    expect(sebelum.dapur.map((i: { id: string }) => i.id)).toEqual(expect.arrayContaining([itemB, itemB2]));
+
+    // Tenant A: Pemilik masuk di perangkatnya (punya semua izin) dengan Tagihan dine-in sendiri.
+    await a.aturPin(await a.anggotaSaya(), '4321');
+    await tabletA.masukPin(await a.anggotaSaya(), '4321').expect(200);
+    const [mejaA] = await a.buatMeja(1, 1);
+    const dineInA = (await tabletA.post('/v1/tagihan', { kanal: 'dine_in', mejaId: mejaA }).expect(201)).body.id;
+    const itemA = (await tabletA.post(`/v1/tagihan/${dineInA}/pesanan`, { item: [{ menuId: menuA }, { menuId: menuA }] }).expect(201)).body.item[0].id as string;
+
+    // Dapur Tenant A tidak memuat item Tenant B.
+    const kdsA = (await tabletA.get('/v1/kds').expect(200)).body;
+    expect(JSON.stringify(kdsA)).not.toContain('Warung B');
+    expect(kdsA.item.map((i: { id: string }) => i.id)).not.toContain(itemB);
+    expect(JSON.stringify((await tabletA.get('/v1/siap-diambil').expect(200)).body)).not.toContain('Warung B');
+
+    const persetujuanB = { persetujuanAtasan: { anggotaId: karyawanB, pin: '1234' } };
+    for (const [nama, coba] of Object.entries({
+      kdsStasiunB: () => tabletA.get(`/v1/kds?stasiun=${stasiunB}`),
+      aliranStasiunB: () => tabletA.get(`/v1/kds/aliran?stasiun=${stasiunB}`),
+      majukanItemB: () => tabletA.post('/v1/kds/status', { itemIds: [itemB], status: 'dimasak' }),
+      majukanCampuran: () => tabletA.post('/v1/kds/status', { itemIds: [itemA, itemB], status: 'dimasak' }),
+      batalItemB: () => tabletA.post(`/v1/tagihan/${dineInB}/item/${itemB}/batal`, { alasan: 'Diretas' }),
+      batalItemBDiTagihanA: () => tabletA.post(`/v1/tagihan/${dineInA}/item/${itemB}/batal`, { alasan: 'Diretas' }),
+      batalTagihanB: () => sebagai(tabletA, 'delete', `/v1/tagihan/${dineInB}`),
+      voidB: () => tabletA.post(`/v1/tagihan/${dineInB}/void`, { alasan: 'Diretas' }),
+      diskonB: () => sebagai(tabletA, 'put', `/v1/tagihan/${dineInB}/diskon`, { jenis: 'persen', nilai: 100, alasan: 'Diretas' }),
+      hapusDiskonB: () => sebagai(tabletA, 'delete', `/v1/tagihan/${dineInB}/diskon`),
+      pindahB: () => tabletA.post(`/v1/tagihan/${dineInB}/pindah-meja`, { mejaId: mejaA }),
+      gabungB: () => tabletA.post(`/v1/tagihan/${dineInB}/gabung-meja`, { mejaId: mejaA }),
+      pisahB: () => tabletA.post(`/v1/tagihan/${dineInB}/pisah`, { itemIds: [itemB] }),
+      pindahKeMejaB: () => tabletA.post(`/v1/tagihan/${dineInA}/pindah-meja`, { mejaId: meja2B }),
+      gabungDenganMejaB: () => tabletA.post(`/v1/tagihan/${dineInA}/gabung-meja`, { mejaId: meja1B }),
+      bukaDiMejaB: () => tabletA.post('/v1/tagihan', { kanal: 'dine_in', mejaId: meja2B }),
+      dashboardTagihanB: () => a.get(`/v1/outlet/${a.outletId}/tagihan/${dineInB}`),
+      dashboardPenjualanB: () => a.get(`/v1/outlet/${b.outletId}/penjualan/hari-ini`),
+      dashboardDaftarB: () => a.get(`/v1/outlet/${b.outletId}/tagihan`),
+    })) {
+      const res = await coba();
+      expect({ nama, status: res.status }).toEqual({ nama, status: 404 });
+      expect(JSON.stringify(res.body)).not.toContain('Warung B');
+    }
+    // Item Tenant B tidak bisa ditarik ke Tagihan Tenant A lewat Pisah Tagihan.
+    expect((await tabletA.post(`/v1/tagihan/${dineInA}/pisah`, { itemIds: [itemB] })).status).toBe(400);
+    // PIN Anggota Tenant B bukan Persetujuan Atasan di Tenant A.
+    for (const coba of [
+      () => tabletA.post(`/v1/tagihan/${dineInA}/void`, { alasan: 'Coba', ...persetujuanB }),
+      () => tabletA.post('/v1/laci/buka', { alasan: 'Coba', ...persetujuanB }),
+    ]) {
+      expect((await coba()).status).toBe(401);
+    }
+    expect((await tabletA.get(`/v1/tagihan/${dineInA}`).expect(200)).body).toMatchObject({ status: 'terbuka', diskonManual: null });
+    // ID Tagihan Tenant B yang dipakai ulang sebagai ID buatan klien (Pisah Tagihan) ditolak.
+    const bentrok = await tabletA.post(`/v1/tagihan/${dineInA}/pisah`, { id: dineInB, itemIds: [itemA] });
+    expect([bentrok.status, bentrok.body.kode]).toEqual([409, 'id_dipakai']);
+
+    expect(await keadaanB()).toEqual(sebelum);
+  });
+
   it('Perangkat Terdaftar di Outlet lain dalam Tenant yang sama tidak melihat Tagihan Outlet ini', async () => {
     const kasirDua = await b.bukaKasir({ outletId: outletKeduaB });
     await tabletB.masukPin(karyawanB, '1234').expect(200);
