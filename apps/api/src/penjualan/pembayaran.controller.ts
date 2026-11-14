@@ -80,11 +80,13 @@ export class PembayaranController {
    * - `jumlah` = bagian Tagihan yang dibayar; tanpa `jumlah` berarti melunasi sisanya. Beberapa
    *   Pembayaran untuk satu Tagihan = Bayar Terpisah. Tagihan baru tertutup (dan mendapat Nomor
    *   Nota) saat sisanya nol.
-   * - Tunai: wajib `diterima` dan Shift terbuka di perangkat ini; kembalian dihitung di sini.
+   * - Wajib ada Shift terbuka di perangkat ini, untuk Metode Bayar apa pun.
+   * - Tunai: wajib `diterima`; kembalian dihitung di sini.
    *   Pembayaran tunai yang melunasi dibulatkan menurut aturan Pembulatan Tunai Outlet; selisihnya
    *   disimpan di `pembulatan`, terpisah dari penjualan.
    * - Non-tunai tidak boleh melebihi sisa.
-   * - Di Outlet bayar-dulu, Pesanan yang ditahan masuk dapur saat Tagihan lunas.
+   * - Di Outlet bayar-dulu, Pesanan yang ditahan masuk dapur saat Tagihan lunas, atau begitu ada
+   *   Pembayaran tunai di kasir.
    *
    * Mengirim ulang dengan `id` yang sama mengembalikan Pembayaran yang sudah tersimpan.
    */
@@ -118,9 +120,10 @@ export class PembayaranController {
     if (!(await metodeBayarAktif(tx, p.outletId)).some((x) => x.jenis === metode)) {
       throw ditolak('metode_bayar_nonaktif', 'Metode Bayar ini tidak aktif di Outlet.');
     }
-    // Tunai masuk laci: wajib ada Shift terbuka di perangkat ini.
+    // Setiap Pembayaran (tunai maupun bukan) tercatat pada Shift terbuka di perangkat ini, supaya
+    // penjualan per Metode Bayar selalu muncul di sebuah Laporan Shift.
     const shiftId = await kunciShiftTerbuka(tx, p.id);
-    if (metode === 'tunai' && !shiftId) throw ditolak('perlu_shift', 'Buka Shift dulu sebelum menerima tunai.');
+    if (!shiftId) throw ditolak('perlu_shift', 'Buka Shift dulu sebelum menerima Pembayaran.');
 
     const item = await itemTagihan(tx, [t.id]);
     if (!item.some((i) => i.status !== 'batal')) throw ditolak('tagihan_kosong', 'Tagihan belum berisi Pesanan.');
@@ -179,19 +182,20 @@ export class PembayaranController {
       .onConflictDoNothing()
       .returning();
     if (!baru) throw idDipakai();
+    // Outlet bayar-dulu: Pesanan yang ditahan masuk dapur saat Tagihan lunas, atau begitu kasir
+    // menerima Pembayaran tunai ("kecuali tunai di kasir").
+    const ditahan = lunas || metode === 'tunai' ? item.filter((i) => i.status === 'ditahan') : [];
+    if (ditahan.length > 0) {
+      await tx.insert(kejadianItemPesanan).values(
+        ditahan.map((i) => ({ tenantId: p.tenantId, outletId: p.outletId, itemPesananId: i.id, status: 'menunggu' as const, anggotaId: pelaku.anggotaId, perangkatId: p.id })),
+      );
+    }
     if (!lunas) {
       res.status(201);
       return { pembayaran: tampilkanPembayaran(baru), tagihan: await tagihanLengkap(tx, t) };
     }
     const semuaPembulatan = (await tx.select({ pembulatan: pembayaran.pembulatan }).from(pembayaran).where(eq(pembayaran.tagihanId, t.id))).reduce((s, x) => s + x.pembulatan, 0);
     const ditutup = await tutupTagihanLunas(tx, t, { ...rincian, pembulatanTunai: semuaPembulatan }, { anggotaId: pelaku.anggotaId, pada: sekarang });
-    // Outlet bayar-dulu: Pesanan yang ditahan baru masuk dapur sekarang.
-    const ditahan = item.filter((i) => i.status === 'ditahan');
-    if (ditahan.length > 0) {
-      await tx.insert(kejadianItemPesanan).values(
-        ditahan.map((i) => ({ tenantId: p.tenantId, outletId: p.outletId, itemPesananId: i.id, status: 'menunggu' as const, anggotaId: pelaku.anggotaId, perangkatId: p.id })),
-      );
-    }
     res.status(201);
     return { pembayaran: tampilkanPembayaran(baru), tagihan: await tagihanLengkap(tx, ditutup) };
   }

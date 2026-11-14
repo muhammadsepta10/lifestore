@@ -841,7 +841,8 @@ export const perintahKlien = pgTable(
 /**
  * Pembayaran: satu pelunasan sebagian atau seluruh Tagihan dengan satu Metode Bayar. Append-only.
  * `jumlah` = nilai yang melunasi Tagihan; `diterima` − `kembalian` = `jumlah` (tunai).
- * `shiftId` = Shift terbuka di perangkat penerima; wajib untuk tunai.
+ * `shiftId` = Shift terbuka di perangkat penerima; wajib untuk setiap Pembayaran baru (kolomnya
+ * tetap boleh kosong untuk Pembayaran non-tunai lama yang diterima tanpa Shift).
  */
 export const pembayaran = pgTable(
   'pembayaran',

@@ -57,7 +57,7 @@ describe('Cara bayar lengkap', () => {
     });
   });
 
-  it('tunai sebagian dengan jumlah yang disebut, lalu EDC dan transfer dengan nomor referensi opsional, tanpa Shift untuk non-tunai', async () => {
+  it('tunai sebagian dengan jumlah yang disebut, lalu EDC dan transfer dengan nomor referensi opsional, semuanya pada Shift terbuka', async () => {
     const pemilik = await dunia.daftarTenant();
     for (const jenis of ['tunai', 'edc', 'transfer']) await pemilik.aktifkanMetodeBayar(jenis);
     const nasgor = await pemilik.buatMenu({ nama: 'Nasi Goreng', harga: 100_000 });
@@ -65,14 +65,15 @@ describe('Cara bayar lengkap', () => {
     const tagihanId = await kasir.bukaTagihan();
     await kasir.kirimPesanan(tagihanId, [{ menuId: nasgor }]).expect(201); // total 110.000
 
-    // Belum ada Shift: EDC dan transfer tetap bisa, tunai tidak.
+    // Belum ada Shift: Pembayaran apa pun ditolak, supaya setiap penjualan masuk sebuah Laporan Shift.
     const kunci = randomUUID();
+    expect((await kasir.bayar(tagihanId, { id: kunci, metode: 'edc', jumlah: 40_000, referensi: 'APPR 0012' }).expect(409)).body.kode).toBe('perlu_shift');
+    expect((await kasir.bayar(tagihanId, { metode: 'tunai', jumlah: 10_000, diterima: 10_000 }).expect(409)).body.kode).toBe('perlu_shift');
+    const shiftId = await kasir.bukaShift(0);
     const edc = await kasir.bayar(tagihanId, { id: kunci, metode: 'edc', jumlah: 40_000, referensi: 'APPR 0012' }).expect(201);
     expect((await kasir.bayar(tagihanId, { id: kunci, metode: 'edc', jumlah: 40_000, referensi: 'APPR 0012' }).expect(200)).body.pembayaran).toEqual(
       edc.body.pembayaran,
     );
-    expect((await kasir.bayar(tagihanId, { metode: 'tunai', jumlah: 10_000, diterima: 10_000 }).expect(409)).body.kode).toBe('perlu_shift');
-    await kasir.bukaShift(0);
     const tunai = (await kasir.bayar(tagihanId, { metode: 'tunai', jumlah: 30_000, diterima: 50_000 }).expect(201)).body;
     expect(tunai.pembayaran).toMatchObject({ jumlah: 30_000, diterima: 50_000, kembalian: 20_000 });
     expect(tunai.tagihan).toMatchObject({ status: 'terbuka', dibayar: 70_000, sisa: 40_000 });
@@ -81,6 +82,13 @@ describe('Cara bayar lengkap', () => {
     expect(transfer.pembayaran).toMatchObject({ metode: 'transfer', jumlah: 40_000, referensi: null });
     expect(transfer.tagihan).toMatchObject({ status: 'lunas', nomorNota: 1, dibayar: 110_000, sisa: 0 });
     expect(transfer.tagihan.pembayaran).toHaveLength(3);
+    // Semua Metode Bayar muncul di Laporan Shift.
+    const laporan = (await kasir.post(`/v1/shift/${shiftId}/tutup`, { hitungButa: 30_000 }).expect(200)).body;
+    expect(laporan.penjualanPerMetodeBayar).toEqual([
+      { jenis: 'tunai', jumlah: 1, nilai: 30_000 },
+      { jenis: 'edc', jumlah: 1, nilai: 40_000 },
+      { jenis: 'transfer', jumlah: 1, nilai: 40_000 },
+    ]);
   });
 
   it('Pisah Tagihan menghasilkan dua Tagihan dengan total benar, masing-masing lunas dengan Nomor Nota sendiri', async () => {
@@ -192,6 +200,7 @@ describe('Cara bayar lengkap', () => {
     const [meja] = await pemilik.buatMeja(1, 1);
     const bakso = await pemilik.buatMenu({ nama: 'Bakso', harga: 10_000 });
     const kasir = await pemilik.bukaKasir();
+    await kasir.bukaShift(0);
     const status = async (tagihanId: string) =>
       ((await kasir.get(`/v1/tagihan/${tagihanId}`).expect(200)).body.pesanan as { item: ItemTampil[] }[]).flatMap((p) => p.item.map((i) => i.status));
 
@@ -206,10 +215,15 @@ describe('Cara bayar lengkap', () => {
     expect(lunas.tagihan.status).toBe('lunas');
     expect(await status(bawaPulang)).toEqual(['menunggu', 'menunggu']);
 
-    // Pengecualian: pelanggan bayar tunai di kasir, Pesanan langsung masuk dapur.
+    // Pengecualian tunai di kasir: begitu kasir menerima Pembayaran tunai (walau belum lunas),
+    // Pesanan masuk dapur. Klien tidak bisa melewatinya hanya dengan mengaku "tunai".
     const tunai = await kasir.bukaTagihan();
-    const langsung = (await kasir.kirimPesanan(tunai, [{ menuId: bakso }], { tunaiDiKasir: true }).expect(201)).body;
-    expect(langsung.item.map((i: ItemTampil) => i.status)).toEqual(['menunggu']);
+    const ditahan = (await kasir.post(`/v1/tagihan/${tunai}/pesanan`, { item: [{ menuId: bakso, jumlah: 2 }], tunaiDiKasir: true }).expect(201)).body;
+    expect(ditahan.item.map((i: ItemTampil) => i.status)).toEqual(['ditahan']);
+    await kasir.bayar(tunai, { metode: 'tunai', jumlah: 10_000, diterima: 10_000 }).expect(201);
+    expect(await status(tunai)).toEqual(['menunggu']);
+    // Pesanan berikutnya di Tagihan yang sudah menerima tunai juga langsung masuk dapur.
+    expect((await kasir.kirimPesanan(tunai, [{ menuId: bakso }]).expect(201)).body.item[0].status).toBe('menunggu');
     // Dine-in tetap bayar di akhir: langsung masuk dapur.
     const dineIn = await kasir.bukaTagihanDineIn(meja!);
     expect((await kasir.kirimPesanan(dineIn, [{ menuId: bakso }]).expect(201)).body.item[0].status).toBe('menunggu');

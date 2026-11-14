@@ -273,7 +273,6 @@ export function PanelPesanan({
   const [sibuk, setSibuk] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [bayar, setBayar] = useState(false);
-  const [tunaiDiKasir, setTunaiDiKasir] = useState(false);
 
   const terkirim = useMemo(() => tagihan?.pesanan.flatMap((x) => x.item) ?? [], [tagihan]);
   const rincian = useMemo(
@@ -322,7 +321,7 @@ export function PanelPesanan({
       jumlah: b.jumlah,
       catatan: b.catatan || undefined,
     }));
-    const hasil = await kirimPesanan(tagihan.id, kunciPesanan, item, tunaiDiKasir);
+    const hasil = await kirimPesanan(tagihan.id, kunciPesanan, item);
     setSibuk(false);
     if (!hasil.ok) {
       setGalat(p.galat[hasil.kode] ?? p.galat.gagal!);
@@ -338,7 +337,7 @@ export function PanelPesanan({
 
   const adaKeranjang = keranjang.length > 0;
   const adaTerkirim = terkirim.some((i) => i.status !== 'batal');
-  const halangan = adaKeranjang || !adaTerkirim ? p.kirimDulu : metodeBayar.length === 0 ? k.bayarLengkap.belumAdaMetode : metodeBayar.every((m) => m.jenis === 'tunai') && !adaShift ? p.perluShift : null;
+  const halangan = adaKeranjang || !adaTerkirim ? p.kirimDulu : metodeBayar.length === 0 ? k.bayarLengkap.belumAdaMetode : !adaShift ? p.perluShift : null;
   const ditahanDulu = bayarDulu && tagihan.kanal === 'bawa_pulang';
   const labelPajak = tagihan.profilPajak.hargaTermasukPajak ? p.pajakTermasuk(tagihan.profilPajak.labelStruk) : tagihan.profilPajak.labelStruk;
 
@@ -445,13 +444,9 @@ export function PanelPesanan({
         </div>
       ) : null}
       {ditahanDulu ? (
-        <label className="centang" title={k.dineIn.ditahanInfo}>
-          <input type="checkbox" checked={tunaiDiKasir} onChange={(e) => setTunaiDiKasir(e.target.checked)} />
-          <span>
-            {k.dineIn.tunaiDiKasir}
-            <small className="muted"> {k.dineIn.ditahanInfo}</small>
-          </span>
-        </label>
+        <p className="muted" style={{ fontSize: 13 }} data-bayar-dulu>
+          {k.dineIn.ditahanInfo}
+        </p>
       ) : null}
       {adaKeranjang ? (
         <button className="tombol tinta besar lebar" type="button" onClick={kirim} disabled={sibuk}>

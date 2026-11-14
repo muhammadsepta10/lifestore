@@ -40,9 +40,8 @@ export function ModalBayar({
   tutup(): void;
 }) {
   const router = useRouter();
-  const bisa = (jenis: string) => jenis !== 'tunai' || adaShift;
   const [kunci, setKunci] = useState(() => crypto.randomUUID());
-  const [dipilih, setDipilih] = useState(() => (metode.find((m) => bisa(m.jenis)) ?? metode[0])?.jenis ?? 'tunai');
+  const [dipilih, setDipilih] = useState(() => metode[0]?.jenis ?? 'tunai');
   const [teksJumlah, setTeksJumlah] = useState('');
   const [teksDiterima, setTeksDiterima] = useState('');
   const [referensi, setReferensi] = useState('');
@@ -60,7 +59,7 @@ export function ModalBayar({
   const selisih = diterima - harusDibayar;
   const cepat = [...new Set([harusDibayar, ...[10_000, 20_000, 50_000, 100_000].map((n) => Math.ceil(harusDibayar / n) * n)])].slice(0, 4);
   const jumlahTidakValid = jumlahDiisi !== null && (jumlahDiisi < 1 || jumlahDiisi > Math.max(sisa, penuh));
-  const bolehTerima = !sibuk && bisa(dipilih) && !jumlahTidakValid && (!tunai || selisih >= 0);
+  const bolehTerima = !sibuk && adaShift && !jumlahTidakValid && (!tunai || selisih >= 0);
 
   async function terima() {
     setSibuk(true);
@@ -114,15 +113,15 @@ export function ModalBayar({
               aria-checked={dipilih === m.jenis}
               data-metode={m.jenis}
               className={`tombol ${dipilih === m.jenis ? 'tinta' : 'tenang'}`}
-              disabled={!bisa(m.jenis)}
-              title={bisa(m.jenis) ? (m.keterangan ?? undefined) : p.perluShift}
+              disabled={!adaShift}
+              title={adaShift ? (m.keterangan ?? undefined) : p.perluShift}
               onClick={() => setDipilih(m.jenis)}
             >
               {m.nama}
             </button>
           ))}
         </div>
-        {!adaShift && metode.some((m) => m.jenis === 'tunai') ? (
+        {!adaShift ? (
           <p className="muted" style={{ fontSize: 13 }}>
             {p.perluShift}
           </p>

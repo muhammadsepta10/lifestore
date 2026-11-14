@@ -56,6 +56,16 @@ export function pelakuAudit(pelaku: { penggunaId: string | null; anggotaId: stri
   return { penggunaId: pelaku.penggunaId, anggotaId: pelaku.anggotaId, perangkatId: p.id };
 }
 
+/** Apakah Tagihan ini sudah menerima Pembayaran tunai di kasir? */
+export async function sudahBayarTunai(tx: TxDb, tagihanId: string): Promise<boolean> {
+  const [b] = await tx
+    .select({ id: pembayaran.id })
+    .from(pembayaran)
+    .where(and(eq(pembayaran.tagihanId, tagihanId), eq(pembayaran.metode, 'tunai')))
+    .limit(1);
+  return b !== undefined;
+}
+
 export function tagihanSudahDitutup(): ConflictException {
   return new ConflictException({ kode: 'tagihan_sudah_ditutup', pesan: 'Tagihan ini sudah ditutup.' });
 }

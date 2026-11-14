@@ -119,6 +119,7 @@ describe('Kendali kasir bersama dine-in dan cara bayar lengkap', () => {
     const bakso = await pemilik.buatMenu({ nama: 'Bakso', harga: 10_000 });
     const kasir = await pemilik.bukaKasir();
     const dapur = await pemilik.bukaKasir({ peran: 'dapur' });
+    await kasir.bukaShift(0);
     const id = await kasir.bukaTagihan();
     const pesanan = (await kasir.kirimPesanan(id, [{ menuId: bakso }, { menuId: bakso, jumlah: 2 }]).expect(201)).body;
     const [satu, dua] = pesanan.item.map((i: { id: string }) => i.id) as string[];

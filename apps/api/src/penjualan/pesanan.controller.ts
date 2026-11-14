@@ -7,9 +7,9 @@ import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
 import { Perangkat, type PerangkatAktif, PerangkatGuard } from '../karyawan/perangkat';
 import { type PermintaanItemPesanan, siapkanItemPesanan } from '../menu/item-pesanan';
 import { Jam } from '../umum/jam';
-import { angka, boolean, objek, teksOpsional, tidakValid } from '../umum/validasi';
+import { angka, objek, teksOpsional, tidakValid } from '../umum/validasi';
 import { kunciPesanan, nomorBerikut, tanggalOperasional } from './nomor';
-import { idDipakai, idKlien, itemTagihan, STATUS_ITEM_AWAL, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
+import { idDipakai, idKlien, itemTagihan, STATUS_ITEM_AWAL, sudahBayarTunai, tagihanDiOutlet, tagihanSudahDitutup, tampilkanPesanan } from './tagihan';
 
 const MAKS_ITEM_PER_PESANAN = 100;
 const MAKS_JUMLAH = 999;
@@ -69,7 +69,6 @@ export class PesananController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const id = idKlien(objek(body));
-    const tunaiDiKasir = objek(body).tunaiDiKasir === undefined ? false : boolean(objek(body), 'tunaiDiKasir');
     const diminta = bacaItem(body);
     const tx = this.db.tenant();
     // Kunci Tagihan: kiriman ulang yang datang bersamaan antre di sini, bukan menggandakan Pesanan.
@@ -84,9 +83,10 @@ export class PesananController {
     }
     if (t.status !== 'terbuka') throw tagihanSudahDitutup();
 
-    // Outlet bayar-dulu: Pesanan bawa pulang ditahan dari dapur sampai lunas, kecuali tunai di kasir.
+    // Outlet bayar-dulu: Pesanan bawa pulang ditahan dari dapur sampai lunas, kecuali tunai di
+    // kasir: Tagihan yang sudah menerima Pembayaran tunai langsung masuk dapur.
     const [o] = await tx.select({ bayarDulu: outlet.bayarDulu }).from(outlet).where(eq(outlet.id, p.outletId));
-    const statusAwal = o?.bayarDulu && t.kanal === 'bawa_pulang' && !tunaiDiKasir ? ('ditahan' as const) : STATUS_ITEM_AWAL;
+    const statusAwal = o?.bayarDulu && t.kanal === 'bawa_pulang' && !(await sudahBayarTunai(tx, t.id)) ? ('ditahan' as const) : STATUS_ITEM_AWAL;
 
     const salinan = [];
     for (const d of diminta) salinan.push({ diminta: d, menu: await siapkanItemPesanan(tx, p.outletId, d) });
