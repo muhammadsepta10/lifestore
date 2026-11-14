@@ -24,6 +24,17 @@ async function tagihanDineInTerbuka(tx: TxDb, outletId: string, id: string): Pro
   return t;
 }
 
+/**
+ * Diskon Manual melekat pada Tagihan, bukan pada item. Memindahkan item keluar-masuk Tagihan
+ * ber-diskon akan mengubah nilai diskon tanpa alasan dan persetujuan baru, jadi diskonnya harus
+ * dilepas dulu lalu dipasang lagi di Tagihan hasilnya.
+ */
+function pastikanTanpaDiskon(t: BarisTagihan): void {
+  if (t.diskonJenis !== null) {
+    throw ditolak('tagihan_berdiskon', 'Lepas Diskon Manual dulu, lalu pasang lagi setelah Tagihan dipisah atau digabung.');
+  }
+}
+
 async function sudahAdaPembayaran(tx: TxDb, tagihanId: string): Promise<boolean> {
   const [p] = await tx.select({ id: pembayaran.id }).from(pembayaran).where(eq(pembayaran.tagihanId, tagihanId)).limit(1);
   return p !== undefined;
@@ -79,6 +90,7 @@ export class AturTagihanController {
     for (const lainId of penghuni.filter((id) => id !== t.id)) {
       const lain = await tagihanDiOutlet(tx, p.outletId, lainId, { kunci: true });
       if (lain.status !== 'terbuka') continue;
+      pastikanTanpaDiskon(lain);
       if (await sudahAdaPembayaran(tx, lain.id)) {
         throw ditolak('tagihan_sudah_dibayar', 'Tagihan di Meja itu sudah menerima Pembayaran, jadi tidak bisa digabung.');
       }
@@ -146,6 +158,7 @@ export class AturTagihanController {
     if (await sudahAdaPembayaran(tx, t.id)) {
       throw ditolak('tagihan_sudah_dibayar', 'Tagihan yang sudah menerima Pembayaran tidak bisa dipisah.');
     }
+    pastikanTanpaDiskon(t);
     const item = (await itemTagihan(tx, [t.id])).filter((i) => i.status !== 'batal');
     const milik = new Set(item.map((i) => i.id));
     if (dipilih.some((x) => !milik.has(x))) throw tidakValid('itemIds', 'Ada Item Pesanan yang bukan bagian dari Tagihan ini.');

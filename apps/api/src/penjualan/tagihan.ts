@@ -28,6 +28,29 @@ export function idDipakai(): ConflictException {
   return new ConflictException({ kode: 'id_dipakai', pesan: 'ID sudah dipakai.' });
 }
 
+/** Item Pesanan yang belum masuk dapur: masih menunggu, atau ditahan sampai lunas (Outlet bayar-dulu). */
+export function belumDimasak(status: StatusItemPesanan): boolean {
+  return status === 'menunggu' || status === 'ditahan';
+}
+
+/**
+ * Tolak perubahan (batal item, Diskon Manual) yang membuat total Tagihan tidak lagi di atas jumlah
+ * yang sudah dibayar: Tagihan itu tidak akan bisa ditutup, dan refund belum ada.
+ */
+export async function pastikanTotalDiAtasDibayar(tx: TxDb, tagihanId: string, totalBaru: number): Promise<void> {
+  const bayar = await tx.select({ jumlah: pembayaran.jumlah, pembulatan: pembayaran.pembulatan }).from(pembayaran).where(eq(pembayaran.tagihanId, tagihanId));
+  if (bayar.length === 0) return;
+  const dibayar = bayar.reduce((s, p) => s + nilaiMelunasi(p), 0);
+  if (totalBaru <= dibayar) {
+    throw new ConflictException({
+      kode: 'pembayaran_melebihi_total',
+      dibayar,
+      total: totalBaru,
+      pesan: 'Tagihan sudah dibayar sebagian; perubahan ini membuat totalnya tidak lagi di atas yang sudah dibayar.',
+    });
+  }
+}
+
 export function tagihanSudahDitutup(): ConflictException {
   return new ConflictException({ kode: 'tagihan_sudah_ditutup', pesan: 'Tagihan ini sudah ditutup.' });
 }
@@ -89,6 +112,7 @@ export function rincianTagihan(t: BarisTagihan, item: readonly ItemBerstatus[]):
     kanal: t.kanal,
     profilPajak: { jenis: t.pajakJenis, tarifPersen: t.pajakTarifPersen, hargaTermasukPajak: t.hargaTermasukPajak },
     serviceCharge: { tarifPersen: t.serviceChargePersen, kanal: t.serviceChargeKanal as Kanal[] },
+    diskon: t.diskonJenis && t.diskonNilai !== null ? { jenis: t.diskonJenis, nilai: t.diskonNilai } : null,
   });
 }
 
@@ -110,13 +134,31 @@ export function tampilkanItem(i: ItemBerstatus) {
   };
 }
 
+/**
+ * Status Pesanan, diturunkan dari Item Pesanan di dalamnya (item batal diabaikan):
+ * `batal` bila semua itemnya batal, `disajikan` bila semua sudah disajikan, `siap` bila semua
+ * sudah siap atau disajikan, `dimasak` bila ada yang sudah mulai dikerjakan, `ditahan` bila semuanya
+ * masih ditahan (Outlet bayar-dulu, belum lunas), selain itu `menunggu`.
+ */
+export function statusPesanan(status: readonly StatusItemPesanan[]): StatusItemPesanan {
+  const aktif = status.filter((s) => s !== 'batal');
+  if (aktif.length === 0) return status.length > 0 ? 'batal' : 'menunggu';
+  if (aktif.every((s) => s === 'disajikan')) return 'disajikan';
+  if (aktif.every((s) => s === 'siap' || s === 'disajikan')) return 'siap';
+  if (aktif.every((s) => s === 'ditahan')) return 'ditahan';
+  if (aktif.some((s) => s !== 'menunggu' && s !== 'ditahan')) return 'dimasak';
+  return 'menunggu';
+}
+
 export function tampilkanPesanan(p: typeof pesanan.$inferSelect, item: readonly ItemBerstatus[]) {
+  const itemnya = item.filter((i) => i.pesananId === p.id);
   return {
     id: p.id,
     tagihanId: p.tagihanId,
     nomorPesanan: p.nomorPesanan,
     dikirimPada: p.dikirimPada,
-    item: item.filter((i) => i.pesananId === p.id).map(tampilkanItem),
+    status: statusPesanan(itemnya.map((i) => i.status)),
+    item: itemnya.map(tampilkanItem),
   };
 }
 
@@ -203,6 +245,10 @@ function ringkasTagihan(t: BarisTagihan, item: readonly ItemBerstatus[], bayar: 
     /** Salinan Profil Pajak; kasir memakainya untuk Hitung Tagihan langsung di layar. */
     profilPajak: { jenis: t.pajakJenis, tarifPersen: t.pajakTarifPersen, labelStruk: t.pajakLabel, hargaTermasukPajak: t.hargaTermasukPajak },
     serviceCharge: { tarifPersen: t.serviceChargePersen, kanal: t.serviceChargeKanal },
+    /** Diskon Manual yang terpasang; kasir memakainya untuk Hitung Tagihan langsung di layar. */
+    diskonManual: t.diskonJenis && t.diskonNilai !== null ? { jenis: t.diskonJenis, nilai: t.diskonNilai, alasan: t.diskonAlasan } : null,
+    /** Alasan void atau pembatalan Tagihan. */
+    alasanTutup: t.alasanTutup,
     rincian,
     total: rincian.total,
     dibayar,

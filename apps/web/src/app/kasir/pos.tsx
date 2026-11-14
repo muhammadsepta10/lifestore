@@ -7,6 +7,7 @@ import { createContext, type CSSProperties, type ReactNode, useContext, useMemo,
 import { t } from '../../i18n/id';
 import { type ItemKiriman, kirimPesanan } from './aksi';
 import { type MetodeBayarAktif, ModalBayar } from './bayar';
+import { type Atasan, KendaliTagihan, labelDiskon, TombolBatalItem } from './kendali';
 import type { KategoriJual, MenuJual, TagihanLengkap } from './tipe';
 
 /**
@@ -257,11 +258,13 @@ export function PanelPesanan({
   metodeBayar,
   pembulatanTunai,
   bayarDulu,
+  atasan = [],
 }: {
   adaShift: boolean;
   metodeBayar: MetodeBayarAktif[];
   pembulatanTunai: AturanPembulatanTunai | null;
   bayarDulu: boolean;
+  atasan?: Atasan[];
 }) {
   const pos = usePos();
   const router = useRouter();
@@ -284,6 +287,7 @@ export function PanelPesanan({
             kanal: tagihan.kanal,
             profilPajak: tagihan.profilPajak,
             serviceCharge: tagihan.serviceCharge,
+            diskon: tagihan.diskonManual ?? null,
           })
         : null,
     [tagihan, terkirim, keranjang],
@@ -366,7 +370,10 @@ export function PanelPesanan({
                   <small>{[rincianBaris(i), i.catatan].filter(Boolean).join(' — ')}</small>
                 </span>
                 <span className="oprice">{rp((i.hargaSatuan + i.pilihan.reduce((s, x) => s + x.harga, 0)) * i.jumlah)}</span>
-                <span className="pil redup ostatus">{p.statusItem[i.status] ?? i.status}</span>
+                <span className="pil redup ostatus" data-status-item={i.status}>
+                  {p.statusItem[i.status] ?? i.status}
+                </span>
+                <TombolBatalItem tagihanId={tagihan.id} item={i} atasan={atasan} />
               </div>
             ))}
           </div>
@@ -398,6 +405,12 @@ export function PanelPesanan({
       <div className="osum" data-rincian>
         <span>{p.subtotal}</span>
         <span data-subtotal>{rp(rincian.subtotal)}</span>
+        {tagihan.diskonManual && rincian.diskon > 0 ? (
+          <>
+            <span>{labelDiskon(tagihan.diskonManual)}</span>
+            <span data-diskon>−{rp(rincian.diskon)}</span>
+          </>
+        ) : null}
         {rincian.serviceCharge > 0 ? (
           <>
             <span>{p.serviceCharge}</span>
@@ -453,6 +466,7 @@ export function PanelPesanan({
           {halangan}
         </p>
       ) : null}
+      {!adaKeranjang ? <KendaliTagihan tagihanId={tagihan.id} berisiItem={terkirim.length > 0} diskon={tagihan.diskonManual ?? null} atasan={atasan} /> : null}
       {bayar ? (
         <ModalBayar tagihanId={tagihan.id} sisa={tagihan.sisa} metode={metodeBayar} adaShift={adaShift} pembulatanTunai={pembulatanTunai} tutup={() => setBayar(false)} />
       ) : null}

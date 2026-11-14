@@ -5,7 +5,7 @@
 #   bash scripts/manual/jalankan-alur-kasir.sh
 #
 # Variabel: PG_ADMIN_URL (default postgres://postgres@localhost:5432), PORT_API (3141), PORT_WEB (3142),
-# PW_CHANNEL (misal `chrome`), HEADED=1, SCREENSHOT_DIR, LEWATI_BUILD=1.
+# PW_CHANNEL (misal `chrome`), HEADED=1, SCREENSHOT_DIR, LEWATI_BUILD=1, SKRIP (skrip alur lain, misal alur-kds.mjs).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -46,4 +46,4 @@ for _ in $(seq 1 60); do
 done
 
 NODE_PATH="${NODE_PATH:-$(npm root -g)}" WEB_URL="http://localhost:$PORT_WEB" API_URL="http://localhost:$PORT_API" API_LOG="$KERJA/api.log" \
-  node scripts/manual/alur-kasir.mjs
+  node "${SKRIP:-scripts/manual/alur-kasir.mjs}"

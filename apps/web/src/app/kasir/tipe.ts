@@ -46,7 +46,7 @@ export interface Rincian {
 
 export interface RingkasTagihan {
   id: string;
-  status: 'terbuka' | 'lunas' | 'void' | 'digabung';
+  status: 'terbuka' | 'lunas' | 'void' | 'batal' | 'digabung';
   kanal: 'dine_in' | 'bawa_pulang';
   /** Meja yang ditempati (dine-in); lebih dari satu setelah gabung Meja. */
   meja: { id: string; label: string }[];
@@ -56,6 +56,8 @@ export interface RingkasTagihan {
   ditutupPada: string | null;
   profilPajak: { jenis: 'PBJT' | 'PPN' | 'tidak_dipungut'; tarifPersen: number; labelStruk: string; hargaTermasukPajak: boolean };
   serviceCharge: { tarifPersen: number; kanal: ('dine_in' | 'bawa_pulang')[] };
+  /** Diskon Manual yang terpasang (#39). */
+  diskonManual?: { jenis: 'persen' | 'nominal'; nilai: number; alasan: string | null } | null;
   rincian: Rincian;
   total: number;
   dibayar: number;

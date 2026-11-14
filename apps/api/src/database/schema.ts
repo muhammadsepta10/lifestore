@@ -186,6 +186,8 @@ export const logAudit = pgTable(
     entitas: text().notNull(),
     entitasId: text().notNull(),
     penggunaId: text(),
+    /** Anggota pelaku; penting untuk staf khusus PIN yang tidak punya Pengguna. */
+    anggotaId: text(),
     perangkatId: text(),
     sebelum: jsonb(),
     sesudah: jsonb(),
@@ -597,7 +599,7 @@ export const tagihan = pgTable(
     mejaId: text().references(() => meja.id),
     namaPelanggan: text(),
     /** `digabung` = isinya dipindahkan ke Tagihan lain saat gabung Meja (bukan penjualan, bukan void). */
-    status: text().$type<'terbuka' | 'lunas' | 'void' | 'digabung'>().notNull().default('terbuka'),
+    status: text().$type<'terbuka' | 'lunas' | 'void' | 'batal' | 'digabung'>().notNull().default('terbuka'),
     /** Tagihan asal bila Tagihan ini hasil Pisah Tagihan. */
     asalTagihanId: text(),
     /** Tagihan tujuan bila Tagihan ini digabung ke Tagihan lain. */
@@ -625,6 +627,17 @@ export const tagihan = pgTable(
     total: bigint({ mode: 'number' }),
     /** Pembulatan Tunai Tagihan ini (bisa negatif); dicatat terpisah, tidak termasuk `total`. */
     pembulatanTunai: bigint({ mode: 'number' }),
+    // Diskon Manual (satu per Tagihan): persen atau nominal rupiah, dengan alasan wajib.
+    diskonJenis: text().$type<'persen' | 'nominal'>(),
+    diskonNilai: numeric({ precision: 14, scale: 2, mode: 'number' }),
+    diskonAlasan: text(),
+    diskonOlehAnggotaId: text().references(() => anggota.id),
+    diskonPenyetujuAnggotaId: text().references(() => anggota.id),
+    /** Alasan void, atau alasan pembatalan Tagihan tanpa item. */
+    alasanTutup: text(),
+    /** Shift terbuka di perangkat yang melakukan void; dasar angka void di Laporan Shift. */
+    voidShiftId: text().references(() => shift.id),
+    voidPenyetujuAnggotaId: text().references(() => anggota.id),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.tenantId), index().on(t.outletId, t.status), uniqueIndex().on(t.outletId, t.nomorNota)],

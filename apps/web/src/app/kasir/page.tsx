@@ -10,6 +10,7 @@ import { AturTagihan } from './atur-tagihan';
 import { bukaShift, bukaTagihan, catatKas, daftarPerangkat, keluarKasir, lupakanPerangkat, masukPin, tutupShift, ubahMeja } from './aksi';
 import { Ikon, type NamaIkon } from './ikon';
 import { TombolCetak, TombolTema } from './klien';
+import { type PesananSiap, SiapDiambil, TombolBukaLaci } from './kendali';
 import { GridMenu, PanelPesanan, PenyediaPos } from './pos';
 import type { DaftarJual, MejaKasir, TagihanLengkap, TagihanTerbuka } from './tipe';
 
@@ -99,12 +100,13 @@ export default async function HalamanKasir({ searchParams }: { searchParams: Pro
   if (!kasir.ok) throw new Error(`Gagal memuat kasir (${kasir.status})`);
   const detailTagihan = (id: string | undefined) =>
     id ? panggilApi<TagihanLengkap>(`/v1/tagihan/${encodeURIComponent(id)}`, { perangkat: true }) : Promise.resolve(undefined);
-  const [meja, jual, terbuka, dipilih, struk] = await Promise.all([
+  const [meja, jual, terbuka, dipilih, struk, siapDiambil] = await Promise.all([
     panggilApi<Meja[]>('/v1/kasir/meja', { perangkat: true }),
     panggilApi<DaftarJual>('/v1/kasir/menu', { perangkat: true }),
     panggilApi<TagihanTerbuka[]>('/v1/tagihan', { perangkat: true }),
     detailTagihan(cari.tagihan),
     detailTagihan(cari.struk),
+    panggilApi<PesananSiap[]>('/v1/siap-diambil', { perangkat: true }),
   ]);
   const laporan = cari.laporan
     ? await panggilApi<LaporanShift>(`/v1/shift/${encodeURIComponent(cari.laporan)}/laporan`, { perangkat: true })
@@ -121,6 +123,8 @@ export default async function HalamanKasir({ searchParams }: { searchParams: Pro
       terbuka={terbuka.ok ? terbuka.body : []}
       tagihan={dipilih?.ok && dipilih.body.status === 'terbuka' ? dipilih.body : null}
       struk={struk?.ok && struk.body.status === 'lunas' ? struk.body : undefined}
+      siapDiambil={siapDiambil.ok ? siapDiambil.body : []}
+      atasan={saya.body.karyawan.filter((x) => x.id !== kasir.body.anggota.id)}
     />
   );
 }
@@ -253,6 +257,9 @@ function LayarTidakBerizin({ k }: { k: Kamus }) {
       <p className="pesan galat" role="alert">
         {k.tidakBerizin}
       </p>
+      <Link className="tombol besar lebar" href="/kds">
+        {k.bukaDapur}
+      </Link>
       <form action={keluarKasir}>
         <button className="tombol tinta besar lebar" type="submit">
           {k.keluar}
@@ -320,6 +327,8 @@ function LayarKasirB({
   terbuka,
   tagihan,
   struk,
+  siapDiambil,
+  atasan,
 }: {
   k: Kamus;
   d: LayarKasir;
@@ -330,6 +339,8 @@ function LayarKasirB({
   terbuka: TagihanTerbuka[];
   tagihan: TagihanLengkap | null;
   struk?: TagihanLengkap;
+  siapDiambil: PesananSiap[];
+  atasan: { id: string; nama: string }[];
 }) {
   const bolehNonaktifkanMeja = d.izin.includes('meja.nonaktifkan');
   const kategoriAktif = jual.kategori.find((x) => x.id === cari.kategori);
@@ -377,6 +388,7 @@ function LayarKasirB({
                   {k.shift.buka}
                 </Link>
               )}
+              <TombolBukaLaci atasan={atasan} />
               <form action={keluarKasir}>
                 <button className="tombol tenang" type="submit">
                   <Ikon nama="keluar" />
@@ -409,6 +421,7 @@ function LayarKasirB({
             ) : null}
             <StatusShift k={k} shift={d.shift} />
 
+            {siapDiambil.length > 0 ? <SiapDiambil daftar={siapDiambil} /> : null}
             <section>
               <div className="sec-h">
                 <h2>{k.tagihanTerbuka}</h2>
@@ -528,7 +541,13 @@ function LayarKasirB({
             {tagihan && tagihan.status === 'terbuka' ? <AturTagihan k={k} tagihan={tagihan} meja={meja} galat={cari.galat === 'atur'} /> : null}
           </div>
 
-          <PanelPesanan adaShift={d.shift !== null} metodeBayar={d.metodeBayar} pembulatanTunai={d.outlet.pembulatanTunai ?? null} bayarDulu={d.outlet.bayarDulu ?? false} />
+          <PanelPesanan
+            adaShift={d.shift !== null}
+            metodeBayar={d.metodeBayar}
+            pembulatanTunai={d.outlet.pembulatanTunai ?? null}
+            bayarDulu={d.outlet.bayarDulu ?? false}
+            atasan={atasan}
+          />
         </div>
         </PenyediaPos>
       </div>
