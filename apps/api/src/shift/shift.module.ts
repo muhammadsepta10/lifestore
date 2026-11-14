@@ -2,7 +2,7 @@ import { Body, ConflictException, Controller, Get, HttpCode, Module, Param, Post
 import { and, asc, count, desc, eq, inArray, sum } from 'drizzle-orm';
 import type { Response } from 'express';
 import { Database, type TxDb } from '../database/database';
-import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift } from '../database/schema';
+import { anggota, kasShift, outlet, pembayaran, pengguna, perangkatTerdaftar, shift, tagihan } from '../database/schema';
 import { JENIS_METODE_BAYAR } from '../pembayaran/metode-bayar.module';
 import { SesiGuard } from '../identitas/sesi.guard';
 import { type Pelaku, PelakuAktif, PerluIzin } from '../izin/izin';
@@ -48,7 +48,7 @@ async function ringkasKas(tx: TxDb, shiftId: string) {
 /**
  * Penjualan per Metode Bayar di Shift, dari Pembayaran yang diterima selama Shift itu
  * (`jumlah` = banyaknya Pembayaran, `nilai` = rupiah yang melunasi Tagihan, tanpa kembalian).
- * Void belum ada, jadi masih nol.
+ * Void: Tagihan yang di-void dari perangkat ini selama Shift (`nilai` = total Tagihan sebelum void).
  */
 async function penjualanShift(tx: TxDb, shiftId: string) {
   const baris = await tx
@@ -56,12 +56,16 @@ async function penjualanShift(tx: TxDb, shiftId: string) {
     .from(pembayaran)
     .where(eq(pembayaran.shiftId, shiftId))
     .groupBy(pembayaran.metode);
+  const [v] = await tx
+    .select({ jumlah: count(), nilai: sum(tagihan.total).mapWith(Number) })
+    .from(tagihan)
+    .where(and(eq(tagihan.voidShiftId, shiftId), eq(tagihan.status, 'void')));
   const urutan = (jenis: string) => (JENIS_METODE_BAYAR as readonly string[]).indexOf(jenis);
   const penjualanPerMetodeBayar = baris.map((b) => ({ jenis: b.jenis, jumlah: b.jumlah, nilai: b.nilai ?? 0 })).sort((a, b) => urutan(a.jenis) - urutan(b.jenis));
   return {
     penjualanPerMetodeBayar,
     penjualanTunai: penjualanPerMetodeBayar.find((x) => x.jenis === 'tunai')?.nilai ?? 0,
-    void: { jumlah: 0, nilai: 0 },
+    void: { jumlah: v?.jumlah ?? 0, nilai: v?.nilai ?? 0 },
   };
 }
 

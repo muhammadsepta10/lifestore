@@ -89,6 +89,7 @@ export function rincianTagihan(t: BarisTagihan, item: readonly ItemBerstatus[]):
     kanal: t.kanal,
     profilPajak: { jenis: t.pajakJenis, tarifPersen: t.pajakTarifPersen, hargaTermasukPajak: t.hargaTermasukPajak },
     serviceCharge: { tarifPersen: t.serviceChargePersen, kanal: t.serviceChargeKanal as Kanal[] },
+    diskon: t.diskonJenis && t.diskonNilai !== null ? { jenis: t.diskonJenis, nilai: t.diskonNilai } : null,
   });
 }
 
@@ -151,7 +152,7 @@ export function tampilkanPembayaran(p: BarisPembayaran) {
 
 /** Angka Tagihan: dibekukan bila sudah ditutup, dihitung ulang dari itemnya bila masih terbuka. */
 function rincianBerlaku(t: BarisTagihan, item: readonly ItemBerstatus[]): Omit<RincianTagihan, 'pembulatanTunai' | 'totalDibayar'> {
-  if (t.status === 'lunas' && t.total !== null) {
+  if (t.status !== 'terbuka' && t.total !== null) {
     return {
       subtotal: t.subtotal ?? 0,
       diskon: t.diskon ?? 0,
@@ -181,6 +182,10 @@ function ringkasTagihan(t: BarisTagihan, item: readonly ItemBerstatus[], bayar: 
     /** Salinan Profil Pajak; kasir memakainya untuk Hitung Tagihan langsung di layar. */
     profilPajak: { jenis: t.pajakJenis, tarifPersen: t.pajakTarifPersen, labelStruk: t.pajakLabel, hargaTermasukPajak: t.hargaTermasukPajak },
     serviceCharge: { tarifPersen: t.serviceChargePersen, kanal: t.serviceChargeKanal },
+    /** Diskon Manual yang terpasang; kasir memakainya untuk Hitung Tagihan langsung di layar. */
+    diskonManual: t.diskonJenis && t.diskonNilai !== null ? { jenis: t.diskonJenis, nilai: t.diskonNilai, alasan: t.diskonAlasan } : null,
+    /** Alasan void atau pembatalan Tagihan. */
+    alasanTutup: t.alasanTutup,
     rincian,
     total: rincian.total,
     dibayar,

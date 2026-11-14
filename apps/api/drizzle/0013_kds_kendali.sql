@@ -1,3 +1,4 @@
+ALTER TABLE "log_audit" ADD COLUMN "anggota_id" text;--> statement-breakpoint
 ALTER TABLE "tagihan" ADD COLUMN "diskon_jenis" text;--> statement-breakpoint
 ALTER TABLE "tagihan" ADD COLUMN "diskon_nilai" numeric(14, 2);--> statement-breakpoint
 ALTER TABLE "tagihan" ADD COLUMN "diskon_alasan" text;--> statement-breakpoint

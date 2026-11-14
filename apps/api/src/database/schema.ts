@@ -181,6 +181,8 @@ export const logAudit = pgTable(
     entitas: text().notNull(),
     entitasId: text().notNull(),
     penggunaId: text(),
+    /** Anggota pelaku; penting untuk staf khusus PIN yang tidak punya Pengguna. */
+    anggotaId: text(),
     perangkatId: text(),
     sebelum: jsonb(),
     sesudah: jsonb(),

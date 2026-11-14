@@ -1,5 +1,5 @@
 {
-  "id": "fff2d0c0-eff4-46f6-83eb-ad63a9adff40",
+  "id": "535e1e01-24b6-4395-b50d-eb7f6c5da57f",
   "prevId": "4660652c-b9ed-4c59-9d3a-c6a6b1673538",
   "version": "7",
   "dialect": "postgresql",
@@ -1212,6 +1212,12 @@
         },
         "pengguna_id": {
           "name": "pengguna_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "anggota_id": {
+          "name": "anggota_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

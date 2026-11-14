@@ -8,6 +8,8 @@ import { PerluIzin } from '../izin/izin';
 /** Siapa yang melakukan aksi. Sesi dashboard mengisi `penggunaId`; kasir nanti juga `perangkatId`. */
 export interface Pelaku {
   penggunaId?: string | null;
+  /** Anggota pelaku (wajib diisi untuk aksi dari Perangkat Terdaftar: staf khusus PIN tidak punya Pengguna). */
+  anggotaId?: string | null;
   perangkatId?: string | null;
 }
 
@@ -46,6 +48,7 @@ export class PenulisLogAudit {
         entitas: c.entitas,
         entitasId: c.entitasId,
         penggunaId: c.pelaku.penggunaId ?? null,
+        anggotaId: c.pelaku.anggotaId ?? null,
         perangkatId: c.pelaku.perangkatId ?? null,
         sebelum: c.sebelum ?? null,
         sesudah: c.sesudah ?? null,
@@ -78,7 +81,7 @@ export class LogAuditController {
       entitas: log.entitas,
       entitasId: log.entitasId,
       outletId: log.outletId,
-      pelaku: { penggunaId: log.penggunaId, email, perangkatId: log.perangkatId },
+      pelaku: { penggunaId: log.penggunaId, email, anggotaId: log.anggotaId, perangkatId: log.perangkatId },
       sebelum: log.sebelum,
       sesudah: log.sesudah,
       alasan: log.alasan,
