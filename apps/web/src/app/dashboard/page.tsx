@@ -83,6 +83,9 @@ export default async function HalamanDashboard() {
             {d.masaCoba.sisaHari > 0 ? k.masaCoba(d.masaCoba.sisaHari) : k.masaCobaHabis}
           </span>
         ) : null}
+        <Link href="/usaha" style={{ fontSize: 14 }}>
+          {k.usahaOutlet}
+        </Link>
         <Link href="/pilih-tenant" style={{ fontSize: 14 }}>
           {k.gantiUsaha}
         </Link>
@@ -187,6 +190,16 @@ export default async function HalamanDashboard() {
                 </span>
                 {l.langkah === 'menu' || l.langkah === 'stasiun' ? (
                   <Link href={`/menu?outlet=${o.id}`} style={gayaTombolSekunder}>
+                    {k.atur}
+                  </Link>
+                ) : null}
+                {l.langkah === 'profil_outlet' || l.langkah === 'profil_pajak' ? (
+                  <Link href={`/outlet?outlet=${o.id}`} style={gayaTombolSekunder}>
+                    {k.atur}
+                  </Link>
+                ) : null}
+                {l.langkah === 'karyawan' || l.langkah === 'perangkat' ? (
+                  <Link href={`/karyawan?outlet=${o.id}`} style={gayaTombolSekunder}>
                     {k.atur}
                   </Link>
                 ) : null}
