@@ -1,0 +1,101 @@
+/* Token desain v3 Lifestore. Font: Plus Jakarta Sans 400–800 (muat dari Google Fonts di aplikasi). */
+:root {
+  color-scheme: light;
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --bg: #eef3f1;
+  --surface: #ffffff;
+  --surface-2: #f4f7f6;
+  --line: #e6ecea;
+  --line-strong: #d3dcd9;
+  --fg: #14201c;
+  --muted: #64736d;
+  --faint: #9aa8a2;
+  --accent: #0f9f7f;
+  --accent-ink: #fff;
+  --accent-soft: #dff5ee;
+  --accent-strong: #0b7d64;
+  --ink: #14201c;
+
+  --warn: #c27803;
+  --warn-soft: #fff1d6;
+  --danger: #e0445c;
+  --danger-soft: #ffe3e8;
+  --ok: #16a34a;
+  --ok-soft: #dcfce7;
+  --info: #2f6fe4;
+  --info-soft: #e0ebff;
+
+  --radius: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(16, 40, 32, 0.04), 0 10px 30px rgba(16, 40, 32, 0.07);
+
+  /* Pastel Kategori: sama di kedua tema */
+  --c-peach: #ffd9c2;
+  --c-lemon: #fff0b3;
+  --c-sky: #cfe6ff;
+  --c-lilac: #e6d9ff;
+  --c-mint: #c9f2df;
+  --c-pink: #ffd6e7;
+  --c-sand: #efe4d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0f1211;
+    --surface: #181c1b;
+    --surface-2: #202625;
+    --line: #2a3230;
+    --line-strong: #37413e;
+    --fg: #eef3f1;
+    --muted: #9eaca7;
+    --faint: #6b7873;
+    --accent: #34d3a6;
+    --accent-ink: #06261d;
+    --accent-soft: #143a30;
+    --accent-strong: #5fe0bb;
+    --ink: #eef3f1;
+    --warn: #f5b54a;
+    --warn-soft: #3a2c10;
+    --danger: #ff7b8f;
+    --danger-soft: #3d1a21;
+    --ok: #4ade80;
+    --ok-soft: #123222;
+    --info: #7fa8ff;
+    --info-soft: #16264a;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0f1211;
+  --surface: #181c1b;
+  --surface-2: #202625;
+  --line: #2a3230;
+  --line-strong: #37413e;
+  --fg: #eef3f1;
+  --muted: #9eaca7;
+  --faint: #6b7873;
+  --accent: #34d3a6;
+  --accent-ink: #06261d;
+  --accent-soft: #143a30;
+  --accent-strong: #5fe0bb;
+  --ink: #eef3f1;
+  --warn: #f5b54a;
+  --warn-soft: #3a2c10;
+  --danger: #ff7b8f;
+  --danger-soft: #3d1a21;
+  --ok: #4ade80;
+  --ok-soft: #123222;
+  --info: #7fa8ff;
+  --info-soft: #16264a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
